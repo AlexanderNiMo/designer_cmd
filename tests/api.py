@@ -70,7 +70,7 @@ class TestDesigner(unittest.TestCase):
     def setUp(self):
         self.temp_path = path.abspath('test_data/temp')
         self.test_base_path = path.abspath('test_data/base')
-        self.cf_path = 'test_data/1Cv8.cf'
+        self.cf_path = 'test_data/Конфигурация БГУ 2.0.69.16012 200415.cf'
 
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)

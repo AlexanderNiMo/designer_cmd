@@ -60,10 +60,20 @@ class Connection:
         else:
             raise NotImplementedError('Создание базы в серверном варианте не реализованно.')
 
+    def __repr__(self):
+        if self.file_path != '':
+            connection_path = f'File: {self.file_path}'
+        elif self.ib_name != '':
+            connection_path = f'IBName: {self.ib_name}'
+        else:
+            connection_path = f'Server: {self.server_path} base_ref: {self.server_base_ref}'
+        connection_path += f'user: {self.user}' if self.user != '' else ''
+        return connection_path
+
 
 class Designer:
 
-    def __init__(self, platform_version: str, connection):
+    def __init__(self, platform_version: str, connection: Connection):
 
         self.platform_version = platform_version
         self.connection = connection
@@ -76,7 +86,7 @@ class Designer:
             params += self.connection.get_connection_params()
         params += ['/DisableStartupDialogs /DisableStartupMessages']
         str_command = ' '.join(params)
-        logger.debug(f'Выполня команду {str_command}')
+        logger.debug(f'Выполняю команду {str_command}')
         result = execute_command(self.platform_path, params)
 
         if result[0] != 0:
@@ -88,6 +98,7 @@ class Designer:
         Соответствует режиму CREATEINFOBASE <строка соединения>
 
         """
+        logger.info(f'Создаю базу по соединению: {self.connection}')
         params = [f'CREATEINFOBASE', f'{self.connection.get_connection_string()}']
         self.__execute_command(params, False)
 
@@ -97,8 +108,8 @@ class Designer:
 
         :return:
         """
+        logger.info(f'Обновляю конфигурацию БД по соединению {self.connection}')
         params = [f'DESIGNER', f'/UpdateDBCfg']
-
         self.__execute_command(params)
 
     def load_db_from_file(self, file_path: str) -> None:
@@ -126,7 +137,9 @@ class Designer:
         :param catalog_path: str - путь к каталогу из которого необходимо произвести загрузку.
         :return:
         """
-        params = [f'DESIGNER', f'/LoadConfigFromFiles {os.path.abspath(catalog_path)}']
+        full_catalog_path = os.path.abspath(catalog_path)
+        logger.info(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
+        params = [f'DESIGNER', f'/LoadConfigFromFiles {full_catalog_path}']
         self.__execute_command(params)
 
     def dump_config_to_files(self, catalog_path: str) -> None:
@@ -136,7 +149,10 @@ class Designer:
         :param catalog_path: Каталог в который будет выгружен файл
         :return:
         """
-        params = [f'DESIGNER', f'/DumpConfigToFiles {os.path.abspath(catalog_path)}']
+        full_catalog_path = os.path.abspath(catalog_path)
+        logger.info(
+            f'Выгружаю конфигурацию в файлы {full_catalog_path} по соединению {self.connection}')
+        params = [f'DESIGNER', f'/DumpConfigToFiles {full_catalog_path}']
         self.__execute_command(params)
 
     def load_config_from_file(self, file_path: str) -> None:
@@ -146,7 +162,10 @@ class Designer:
         :param file_path:
         :return:
         """
-        params = [f'DESIGNER', f'/LoadCfg {os.path.abspath(file_path)}']
+        full_file_path = os.path.abspath(file_path)
+        logger.info(
+            f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
+        params = [f'DESIGNER', f'/LoadCfg {full_file_path}']
         self.__execute_command(params)
 
     def dump_config_to_file(self, file_path: str) -> None:
@@ -155,7 +174,10 @@ class Designer:
         :param file_path:
         :return:
         """
-        params = [f'DESIGNER', f'/DumpCfg {os.path.abspath(file_path)}']
+        full_file_path = os.path.abspath(file_path)
+        logger.info(
+            f'Сохраняю конфигурацию в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
+        params = [f'DESIGNER', f'/DumpCfg {full_file_path}']
         self.__execute_command(params)
 
     def merge_config_with_file(self, cf_file_path: str, settings_path: str) -> None:
@@ -177,13 +199,19 @@ class Designer:
         :param: report_path: Путь к файлу, в который необходимо сохранить отчет.
         :return:
         """
-
+        logger.info(
+            f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
+        full_cf_file_path = os.path.abspath(cf_file_path)
+        full_report_path = os.path.abspath(report_path)
+        logger.info(
+            f'Сравниваю конфигурацию по соединению {self.connection} с файлом {full_cf_file_path} '
+            f'для сохранения отчета по пути {full_report_path} ')
         params = [
             f'/CompareCfg',
             f'–FirstConfigurationType MainConfiguration',
-            f'-SecondConfigurationType {cf_file_path}',
+            f'-SecondConfigurationType {full_cf_file_path}',
             f'–ReportType Full',
             f'-ReportFormat txt',
-            f'-ReportFile {report_path}'
+            f'-ReportFile {full_report_path}'
       ]
         self.__execute_command(params)
