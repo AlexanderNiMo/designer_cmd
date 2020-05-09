@@ -1,6 +1,7 @@
 from designer_cmd.utils import get_platform_path, execute_command
 import os
 import logging
+import tempfile
 
 logger = logging.getLogger(__file__)
 
@@ -85,12 +86,25 @@ class Designer:
         if connection_params_required:
             params += self.connection.get_connection_params()
         params += ['/DisableStartupDialogs /DisableStartupMessages']
+
+        debug_file_name = self.add_debug_params(params)
+
         str_command = ' '.join(params)
-        logger.debug(f'Выполняю команду {str_command}')
+        logger.debug(f'Выполняю команду {self.platform_path} {str_command}')
         result = execute_command(self.platform_path, params)
 
         if result[0] != 0:
+            logger.error(f'При выполнении команды произошла ошибка: {open(debug_file_name).read()}')
+            os.remove(debug_file_name)
             raise SyntaxError('Не удалось выполнить команду!')
+        os.remove(debug_file_name)
+
+    def add_debug_params(self, params) -> str:
+        debug_file_name = tempfile.mkstemp('.log')
+        params.append('/Out')
+        params.append(debug_file_name[1])
+        os.close(debug_file_name[0])
+        return debug_file_name[1]
 
     def create_base(self):
         """
@@ -191,7 +205,7 @@ class Designer:
         """
         raise NotImplementedError
 
-    def compare_configs_with_file(self, cf_file_path: str, report_path: str) -> None:
+    def compare_config_with_file(self, cf_file_path: str, report_path: str) -> None:
         """
         Выполнить сравнение двух конфигураций и сформировать файл с отчетом о сравнении.
         (соответствует команде /CompareCfg)
@@ -199,19 +213,25 @@ class Designer:
         :param: report_path: Путь к файлу, в который необходимо сохранить отчет.
         :return:
         """
-        logger.info(
-            f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
         full_cf_file_path = os.path.abspath(cf_file_path)
         full_report_path = os.path.abspath(report_path)
         logger.info(
             f'Сравниваю конфигурацию по соединению {self.connection} с файлом {full_cf_file_path} '
             f'для сохранения отчета по пути {full_report_path} ')
         params = [
-            f'/CompareCfg',
-            f'–FirstConfigurationType MainConfiguration',
-            f'-SecondConfigurationType {full_cf_file_path}',
-            f'–ReportType Full',
-            f'-ReportFormat txt',
-            f'-ReportFile {full_report_path}'
+            'DESIGNER',
+            '/CompareCfg',
+            '-FirstConfigurationType',
+            'MainConfiguration',
+            '-SecondConfigurationType',
+            'File',
+            '-SecondFile',
+            f'{full_cf_file_path}',
+            '–ReportType',
+            'txt',
+            '-ReportFormat',
+            'Full',
+            '-ReportFile',
+            f'{full_report_path}'
       ]
         self.__execute_command(params)

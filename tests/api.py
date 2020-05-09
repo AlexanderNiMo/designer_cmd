@@ -70,7 +70,7 @@ class TestDesigner(unittest.TestCase):
     def setUp(self):
         self.temp_path = path.abspath('test_data/temp')
         self.test_base_path = path.abspath('test_data/base')
-        self.cf_path = 'test_data/Конфигурация БГУ 2.0.69.16012 200415.cf'
+        self.cf_path = 'test_data/1Cv8.cf'
 
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)
@@ -84,6 +84,7 @@ class TestDesigner(unittest.TestCase):
     def prepare_base(self):
         self.designer.create_base()
         self.designer.load_config_from_file(self.cf_path)
+        self.designer.updete_db_config()
 
     def test_load_create_db(self):
         self.designer.create_base()
@@ -92,7 +93,8 @@ class TestDesigner(unittest.TestCase):
         self.prepare_base()
 
     def test_update_cfg(self):
-        self.prepare_base()
+        self.designer.create_base()
+        self.designer.load_config_from_file(self.cf_path)
         self.designer.updete_db_config()
 
     def test_dump_conf_to_file(self):
@@ -105,6 +107,10 @@ class TestDesigner(unittest.TestCase):
         if not path.exists(dir_xml_config_path):
             os.mkdir(dir_xml_config_path)
         self.designer.dump_config_to_files(dir_xml_config_path)
+
+    def test_compare_conf(self):
+        self.prepare_base()
+        self.designer.compare_config_with_file(self.cf_path, os.path.join(self.temp_path, 'report.txt'))
 
     def tearDown(self):
         clear_folder(self.test_base_path)
