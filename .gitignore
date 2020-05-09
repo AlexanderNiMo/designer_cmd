@@ -1,0 +1,9 @@
+*.cfl
+*.1CD
+*.lfg
+*.lgp
+*.pyx
+*.pyi
+
+venv
+.idea
