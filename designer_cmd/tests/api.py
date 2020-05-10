@@ -68,10 +68,12 @@ def clear_folder(dir_path):
 class TestDesigner(unittest.TestCase):
 
     def setUp(self):
-        self.temp_path = path.abspath('test_data/temp')
-        self.test_base_path = path.abspath('test_data/base')
-        self.cf_path = 'test_data/1Cv8.cf'
-        self.dt_path = 'test_data/1Cv8.dt'
+        test_data_dir = path.join(path.dirname(__file__), 'test_data')
+
+        self.temp_path = path.join(test_data_dir, 'temp')
+        self.test_base_path = path.join(test_data_dir, 'base')
+        self.cf_path = path.join(test_data_dir, '1Cv8.cf')
+        self.dt_path = path.join(test_data_dir, '1Cv8.dt')
 
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)

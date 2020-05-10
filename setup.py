@@ -22,6 +22,12 @@ def load_requirements(fname: str) -> list:
     return requirements
 
 
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except(IOError, ImportError):
+    long_description = open('README.md', encoding='utf-8').read()
+
 setup(
     name=module_name,
     version=module.__version__,
@@ -29,8 +35,10 @@ setup(
     author_email=module.__email__,
     license=module.__license__,
     description=module.__doc__,
-    long_description=open('README.md').read(),
-    url='',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+
+    url='https://github.com/AlexanderNiMo/designer_cmd',
     platforms='Windows',
     classifiers=[
         'Intended Audience :: Developers',
@@ -42,5 +50,6 @@ setup(
     python_requires='>=3.6',
     packages=find_packages(exclude=['tests']),
     install_requires=load_requirements('requirements.txt'),
-    include_package_data=True
+    include_package_data=True,
+    test_suite='designer_cmd.tests',
 )
