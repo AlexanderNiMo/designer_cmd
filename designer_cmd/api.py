@@ -80,13 +80,12 @@ class Designer:
         self.connection = connection
         self.platform_path = get_platform_path(self.platform_version)
 
-    def __execute_command(self, command_params: list, connection_params_required: bool = True):
-        params = []
+    def __execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
+        params = [mode]
         params += command_params
         if connection_params_required:
             params += self.connection.get_connection_params()
         params += ['/DisableStartupDialogs /DisableStartupMessages']
-
         debug_file_name = self.add_debug_params(params)
 
         str_command = ' '.join(params)
@@ -113,8 +112,8 @@ class Designer:
 
         """
         logger.info(f'Создаю базу по соединению: {self.connection}')
-        params = [f'CREATEINFOBASE', f'{self.connection.get_connection_string()}']
-        self.__execute_command(params, False)
+        params = [f'{self.connection.get_connection_string()}']
+        self.__execute_command('CREATEINFOBASE', params, False)
 
     def updete_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False):
         """
@@ -123,8 +122,8 @@ class Designer:
         :return:
         """
         logger.info(f'Обновляю конфигурацию БД по соединению {self.connection}')
-        params = [f'DESIGNER', f'/UpdateDBCfg']
-        self.__execute_command(params)
+        params = [f'/UpdateDBCfg']
+        self.__execute_command(f'DESIGNER', params)
 
     def load_db_from_file(self, file_path: str) -> None:
         """
@@ -133,7 +132,10 @@ class Designer:
         :param file_path: str - Путь к файлу базы (dt.)
         :return:
         """
-        raise NotImplementedError
+        full_file_path = os.path.abspath(file_path)
+        logger.info(f'Загружаю файл dt {full_file_path} в БД по соединению {self.connection}')
+        params = ['/RestoreIB', f'{full_file_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def dump_db_to_file(self, file_path: str) -> None:
         """
@@ -142,7 +144,10 @@ class Designer:
         :param file_path: str - Путь к файлу для выгрзки базы (dt.)
         :return:
         """
-        raise NotImplementedError
+        full_file_path = os.path.abspath(file_path)
+        logger.info(f'Выгружаю файл dt по пути {full_file_path} из БД по соединению {self.connection}')
+        params = ['/DumpIB', f'{full_file_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def load_config_from_files(self, catalog_path: str) -> None:
         """
@@ -153,8 +158,8 @@ class Designer:
         """
         full_catalog_path = os.path.abspath(catalog_path)
         logger.info(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
-        params = [f'DESIGNER', f'/LoadConfigFromFiles {full_catalog_path}']
-        self.__execute_command(params)
+        params = [f'/LoadConfigFromFiles {full_catalog_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def dump_config_to_files(self, catalog_path: str) -> None:
         """
@@ -166,8 +171,8 @@ class Designer:
         full_catalog_path = os.path.abspath(catalog_path)
         logger.info(
             f'Выгружаю конфигурацию в файлы {full_catalog_path} по соединению {self.connection}')
-        params = [f'DESIGNER', f'/DumpConfigToFiles {full_catalog_path}']
-        self.__execute_command(params)
+        params = [f'/DumpConfigToFiles {full_catalog_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def load_config_from_file(self, file_path: str) -> None:
         """
@@ -179,8 +184,8 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.info(
             f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
-        params = [f'DESIGNER', f'/LoadCfg {full_file_path}']
-        self.__execute_command(params)
+        params = [f'/LoadCfg {full_file_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def dump_config_to_file(self, file_path: str) -> None:
         """
@@ -191,8 +196,8 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.info(
             f'Сохраняю конфигурацию в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
-        params = [f'DESIGNER', f'/DumpCfg {full_file_path}']
-        self.__execute_command(params)
+        params = [f'/DumpCfg {full_file_path}']
+        self.__execute_command(f'DESIGNER', params)
 
     def merge_config_with_file(self, cf_file_path: str, settings_path: str) -> None:
         """
@@ -219,7 +224,6 @@ class Designer:
             f'Сравниваю конфигурацию по соединению {self.connection} с файлом {full_cf_file_path} '
             f'для сохранения отчета по пути {full_report_path} ')
         params = [
-            'DESIGNER',
             '/CompareCfg',
             '-FirstConfigurationType',
             'MainConfiguration',
@@ -227,11 +231,14 @@ class Designer:
             'File',
             '-SecondFile',
             f'{full_cf_file_path}',
+            '-IncludeChangedObjects',
+            '-IncludeDeletedObjects',
+            '-IncludeAddedObjects',
             '–ReportType',
             'txt',
             '-ReportFormat',
             'Full',
             '-ReportFile',
             f'{full_report_path}'
-      ]
-        self.__execute_command(params)
+        ]
+        self.__execute_command(f'DESIGNER', params)
