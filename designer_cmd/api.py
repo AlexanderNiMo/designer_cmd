@@ -15,7 +15,8 @@ class Connection:
                  file_path: str = '',
                  server_path: str = '',
                  server_base_ref: str = '',
-                 ib_name: str = ''):
+                 ib_name: str = '',
+                 time_out: int = 3600):
 
         if file_path == '' and (server_path == '' or server_base_ref == '') and ib_name == '':
             raise AttributeError('Для соедеинения не определен путь к базе!')
@@ -28,6 +29,16 @@ class Connection:
         self.file_path = os.path.abspath(file_path) if file_path != '' else ''
         self.server_path = server_path
         self.server_base_ref = server_base_ref
+
+        self.__time_out = time_out
+
+    @property
+    def timeout(self):
+        return self.__time_out
+
+    @timeout.setter
+    def timeout(self, value):
+        self.__time_out = value
 
     def get_connection_params(self) -> list:
         """
@@ -90,10 +101,11 @@ class Designer:
 
         str_command = ' '.join(params)
         logger.debug(f'Выполняю команду {self.platform_path} {str_command}')
-        result = execute_command(self.platform_path, params)
+
+        result = execute_command(self.platform_path, params, self.connection.timeout)
 
         if result[0] != 0:
-            logger.error(f'При выполнении команды произошла ошибка: {open(debug_file_name).read()}')
+            logger.error(f'При выполнении команды произошла ошибка: {open(debug_file_name).read()} {result[1]}')
             os.remove(debug_file_name)
             raise SyntaxError('Не удалось выполнить команду!')
         os.remove(debug_file_name)

@@ -102,7 +102,10 @@ class TestDesigner(unittest.TestCase):
 
     def test_dump_conf_to_file(self):
         self.prepare_base()
-        self.designer.dump_config_to_file(path.join(self.temp_path, '1Cv81.cf'))
+        cf_file_path = path.join(self.temp_path, '1Cv81.cf')
+        self.designer.dump_config_to_file(cf_file_path)
+
+        self.assertTrue(os.path.exists(cf_file_path), 'Выгрузка кофигурации не создана!')
 
     def test_dump_config_to_files(self):
         self.prepare_base()
@@ -111,10 +114,16 @@ class TestDesigner(unittest.TestCase):
             os.mkdir(dir_xml_config_path)
         self.designer.dump_config_to_files(dir_xml_config_path)
 
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
+            'Не обнаружена выгрузка в xml'
+        )
+
     def test_compare_conf(self):
         self.prepare_base()
         report_path = os.path.join(self.temp_path, 'report.txt')
         self.designer.compare_config_with_file(self.cf_path, report_path)
+
         self.assertTrue(os.path.exists(report_path), 'Отчет о сравнении не создан!')
 
     def test_dump_db_to_file(self):
@@ -122,10 +131,11 @@ class TestDesigner(unittest.TestCase):
         new_dt_path = os.path.join(self.temp_path, '1c.dt')
         self.designer.dump_db_to_file(new_dt_path)
 
+        self.assertTrue(os.path.exists(new_dt_path), 'Файл выгрузки не создан!')
+
     def test_load_db_from_file(self):
         self.designer.create_base()
-        new_dt_path = os.path.join(self.dt_path)
-        self.designer.load_db_from_file(new_dt_path)
+        self.designer.load_db_from_file(self.dt_path)
 
     def tearDown(self):
         clear_folder(self.test_base_path)

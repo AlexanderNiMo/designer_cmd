@@ -78,5 +78,9 @@ class TestUtils(unittest.TestCase):
         result = utils.execute_command('dir111', [])
         self.assertNotEqual(result[0], 0, 'Проверка на ошибочную команду провалилась!')
 
+    def test_timout_exception(self):
+        result = utils.execute_command('cmd.exe', ['/c', 'pause 10'], 1)
+        self.assertTrue(result[0] == 1, 'Ошибка по таймауту не произошла')
+
     def tearDown(self):
         pass

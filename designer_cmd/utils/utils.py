@@ -89,42 +89,46 @@ def __get_platform_path_linux(version: str) -> str:
     return platform_path
 
 
-def execute_command(command: str, params: list) -> tuple:
+def execute_command(command: str, params: list, timeout: int = None) -> tuple:
     """
     Выполняет команду в системе.
 
     :param command: Команда
     :param params: Параметры команды
+    :param timeout: Лимит времени на выполнение команды, после выхода за пределы будет возбуждено исключение.
     :return:
     """
     if windows_platform():
-        result = __execute_windows_command(command, params)
+        result = __execute_windows_command(command, params, timeout)
     else:
-        result = __execute_linux_command(command)
+        result = __execute_linux_command(command, params, timeout)
     return result
 
 
-def __execute_windows_command(command: str, params: list) -> tuple:
+def __execute_windows_command(command: str, params: list, timeout: int) -> tuple:
     """
     Выполняет команду системы в windows
 
     :param command:
     :return:
     """
-    process = subprocess.run(
-        [command] + params,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        check=True,
-        encoding=encoding(),
-    )
-
-    if process.returncode == 0:
-        msg = process.stdout
-    else:
-        msg = process.stderr
-    return process.returncode, msg.strip()
+    try:
+        process = subprocess.run(
+            args=[command] + params,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            check=True,
+            encoding=encoding(),
+            timeout=timeout
+        )
+        if process.returncode == 0:
+            msg = process.stdout
+        else:
+            msg = process.stderr
+        return process.returncode, msg.strip()
+    except subprocess.TimeoutExpired:
+        return 1, 'Выполнение процесса вышло за рамки отведенного времени.'
 
 
 def encoding() -> str:
@@ -142,7 +146,7 @@ def encoding() -> str:
                 sys.getfilesystemencoding() or "utf-8")
 
 
-def __execute_linux_command(command) -> str:
+def __execute_linux_command(command: str, params: list, timeout: int) -> str:
     """
     Выполняет команду системы в linux
 
