@@ -94,7 +94,7 @@ def execute_command(command: str, params: list) -> tuple:
     Выполняет команду в системе.
 
     :param command: Команда
-    :param: params: Параметры команды
+    :param params: Параметры команды
     :return:
     """
     if windows_platform():
@@ -111,12 +111,35 @@ def __execute_windows_command(command: str, params: list) -> tuple:
     :param command:
     :return:
     """
-    process = subprocess.run([command] + params, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    process = subprocess.run(
+        [command] + params,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        check=True,
+        encoding=encoding(),
+    )
+
     if process.returncode == 0:
         msg = process.stdout
     else:
         msg = process.stderr
-    return process.returncode, msg.decode('cp866')
+    return process.returncode, msg.strip()
+
+
+def encoding() -> str:
+    """
+    Определяет кодировку в контексте системы.
+        Спасибо (@vbondarevsky)
+    :return:
+    """
+    if windows_platform():
+        import ctypes
+        return f"cp{ctypes.windll.kernel32.GetOEMCP()}"
+    else:
+        return (sys.stdout.encoding if sys.stdout.isatty() else
+                sys.stderr.encoding if sys.stderr.isatty() else
+                sys.getfilesystemencoding() or "utf-8")
 
 
 def __execute_linux_command(command) -> str:
@@ -126,4 +149,5 @@ def __execute_linux_command(command) -> str:
     :param command:
     :return:
     """
+    raise NotImplementedError('Не реализовано!')
     pass
