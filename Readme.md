@@ -1,3 +1,6 @@
+[![image](https://img.shields.io/pypi/v/designer_cmd.svg)](https://pypi.org/project/designer_cmd)
+[![image](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 # Пакет для автоматизации взаимодействия с пакетным режимом 1С.
 
 Формат команд поддерживается только > 8.3.12
