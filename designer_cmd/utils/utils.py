@@ -3,15 +3,78 @@ import sys
 import os.path as path
 import os
 import subprocess
+from functools import total_ordering
 
 logger = logging.getLogger(__file__)
+
+
+@total_ordering
+class PlatformVersion:
+
+    def __init__(self, version: str):
+        self.version: str = version
+        if self.version != '':
+            version_weight = self.__get_version_weight()
+        else:
+            version_weight = 2147483647
+        self.__version_weight: int = version_weight
+
+    @property
+    def version_weight(self) -> int:
+        return self.__version_weight
+
+    def __get_version_weight(self) -> int:
+        """
+        Вычисляет вес версии, для сравнения версий
+        Подразумевается, что версии, для которых будет вычисляться октавы имеют одинаковые длины октавово
+        и их длина не больше 4
+
+        :param element:
+        :return:
+        """
+        octs_first = self.version.split('.')
+
+        while len(octs_first) < 4:
+            octs_first.append('0')
+
+        if len(octs_first) > 4:
+            raise ValueError(f'Версия платформы имеет 4 октава, передано значение {octs_first}')
+
+        octs_first.reverse()
+        koef = 1000
+        summ = 0
+        for i, val in enumerate(octs_first):
+            if len(val) > 4:
+                logger.error(f'Длина октава {val} в версии {self.version} больше 4, вычисление веса не поддерживается.')
+                raise ValueError('Ошибка вычисления веса версии, длинна октава не должна быть больше 4.')
+            summ += int(val) * koef ** i
+        return summ
+
+    def __str__(self):
+        return self.version
+
+    def __repr__(self):
+        return self.version
+
+    def _is_valid_operand(self, other):
+        return hasattr(other, "version_weight")
+
+    def __eq__(self, other):
+        if not self._is_valid_operand(other):
+            return NotImplemented
+        return self.version_weight == other.version_weight
+
+    def __lt__(self, other):
+        if not self._is_valid_operand(other):
+            return NotImplemented
+        return self.version_weight < other.version_weight
 
 
 def windows_platform() -> bool:
     return 'win' in sys.platform
 
 
-def get_platform_path(version: str = '') -> str:
+def get_platform_path(version: PlatformVersion) -> str:
     """
     Вычисляет путь к исполняемому файлу платформы
 
@@ -27,46 +90,25 @@ def get_platform_path(version: str = '') -> str:
     return platform_path
 
 
-def __get_version_path(dir_1c, version) -> str:
+def __get_version_path(dir_1c, version: PlatformVersion) -> str:
     bin_path = 'bin\\1cv8.exe'
     exept_dir = ['common', 'conf']
 
-    versions = [dir_name for dir_name in os.listdir(dir_1c) if dir_name not in exept_dir]
+    versions = [PlatformVersion(dir_name) for dir_name in os.listdir(dir_1c) if dir_name not in exept_dir]
 
     if len(versions) == 0:
         return ''
 
-    if version == '':
+    if version.version == '':
         # Получим максимальную версию
-        return path.join(dir_1c, sorted(versions, key=get_version_weight, reverse=True)[0], bin_path)
+        return path.join(dir_1c, sorted(versions, key=lambda v: v.version_weight, reverse=True)[0].version, bin_path)
     elif version in versions:
-        return path.join(dir_1c, version, bin_path)
+        return path.join(dir_1c, version.version, bin_path)
     else:
         return ''
 
 
-def get_version_weight(element: str) -> int:
-    """
-    Вычисляет вес версии, для сравнения версий
-    Подразумевается, что версии, для которых будет вычисляться октавы имеют одинаковые длины октавово
-    и их длина не больше 4
-
-    :param element:
-    :return:
-    """
-    octs_first = element.split('.')
-    octs_first.reverse()
-    koef = 1000
-    summ = 0
-    for i, val in enumerate(octs_first):
-        if len(val) > 4:
-            logger.error(f'Длина октава {val} в версии {element} больше 4, вычисление веса не поддерживается.')
-            raise ValueError('Ошибка вычисления веса версии, длинна октава не должна быть больше 4.')
-        summ += int(val) * koef ** i
-    return summ
-
-
-def __get_platform_path_windows(version: str) -> str:
+def __get_platform_path_windows(version: PlatformVersion) -> str:
     version_path = __get_version_path(path.join(os.getenv('ProgramW6432'), '1cv8'), version)
 
     if version_path == '':
@@ -83,7 +125,7 @@ def __get_platform_path_windows(version: str) -> str:
     return version_path
 
 
-def __get_platform_path_linux(version: str) -> str:
+def __get_platform_path_linux(version: PlatformVersion) -> str:
     platform_path = ''
 
     return platform_path
@@ -155,3 +197,14 @@ def __execute_linux_command(command: str, params: list, timeout: int) -> str:
     """
     raise NotImplementedError('Не реализовано!')
     pass
+
+
+def dir_is_clear(dir_path: str):
+    pass
+
+
+def xml_conf_version_file_exists(dir_path: str):
+    version_file_name = "ConfigDumpInfo.xml"
+    test_path = os.path.join(dir_path, version_file_name)
+    return os.path.exists(test_path)
+

@@ -1,4 +1,4 @@
-from designer_cmd.utils import get_platform_path, execute_command
+from designer_cmd.utils import get_platform_path, execute_command, xml_conf_version_file_exists, PlatformVersion
 import os
 import logging
 import tempfile
@@ -87,7 +87,7 @@ class Designer:
 
     def __init__(self, platform_version: str, connection: Connection):
 
-        self.platform_version = platform_version
+        self.platform_version: PlatformVersion = PlatformVersion(platform_version)
         self.connection = connection
         self.platform_path = get_platform_path(self.platform_version)
 
@@ -173,10 +173,11 @@ class Designer:
         params = [f'/LoadConfigFromFiles {full_catalog_path}']
         self.__execute_command(f'DESIGNER', params)
 
-    def dump_config_to_files(self, catalog_path: str) -> None:
+    def dump_config_to_files(self, catalog_path: str, update: bool = True) -> None:
         """
         Выгружает конфигурацию в файлы (соответствует команде /DumpConfigToFiles)
 
+        :param update:
         :param catalog_path: Каталог в который будет выгружен файл
         :return:
         """
@@ -184,6 +185,14 @@ class Designer:
         logger.info(
             f'Выгружаю конфигурацию в файлы {full_catalog_path} по соединению {self.connection}')
         params = [f'/DumpConfigToFiles {full_catalog_path}']
+
+        increment_platform_version = PlatformVersion('8.3.10')
+
+        if (update and xml_conf_version_file_exists(catalog_path)
+                and self.platform_version >= increment_platform_version):
+            params.append('-update')
+            params.append('-force')
+
         self.__execute_command(f'DESIGNER', params)
 
     def load_config_from_file(self, file_path: str) -> None:
