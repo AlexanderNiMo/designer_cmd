@@ -220,6 +220,29 @@ class Designer:
         params = [f'/DumpCfg {full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
+    def dump_extension_to_file(self, file_path: str, extension_name: str):
+        full_file_path = os.path.abspath(file_path)
+        logger.info(
+            f'Сохраняю расширения в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
+        params = [
+            f'/DumpConfigToFiles {full_file_path}',
+            f'-Extension {extension_name}',
+            '-force'
+        ]
+
+        self.__execute_command(f'DESIGNER', params)
+
+    def dump_extensions_to_files(self, dir_path):
+        full_dir_path = os.path.abspath(dir_path)
+        logger.info(
+            f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
+        params = [
+            f'/DumpConfigToFiles {full_dir_path}',
+            f'–AllExtensions',
+            '-force'
+        ]
+        self.__execute_command(f'DESIGNER', params)
+
     def merge_config_with_file(self, cf_file_path: str, settings_path: str) -> None:
         """
         Выполнить объединение текущей конфигурации с файлом (с использованием файла настроек).
