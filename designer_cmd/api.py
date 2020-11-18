@@ -127,7 +127,7 @@ class Designer:
         params = [f'{self.connection.get_connection_string()}']
         self.__execute_command('CREATEINFOBASE', params, False)
 
-    def updete_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False):
+    def update_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False):
         """
         Обновляет конфигурацию db. (соответствует команде /UpdateDBCfg)
 

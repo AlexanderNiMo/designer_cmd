@@ -74,6 +74,7 @@ class TestDesigner(unittest.TestCase):
         self.test_base_path = path.join(test_data_dir, 'base')
         self.cf_path = path.join(test_data_dir, '1Cv8.cf')
         self.dt_path = path.join(test_data_dir, '1Cv8.dt')
+        self.cf_increment_path = path.join(test_data_dir, '1Cv8_increment.cf')
 
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)
@@ -87,7 +88,7 @@ class TestDesigner(unittest.TestCase):
     def prepare_base(self):
         self.designer.create_base()
         self.designer.load_config_from_file(self.cf_path)
-        self.designer.updete_db_config()
+        self.designer.update_db_config()
 
     def test_load_create_db(self):
         self.designer.create_base()
@@ -98,7 +99,7 @@ class TestDesigner(unittest.TestCase):
     def test_update_cfg(self):
         self.designer.create_base()
         self.designer.load_config_from_file(self.cf_path)
-        self.designer.updete_db_config()
+        self.designer.update_db_config()
 
     def test_dump_conf_to_file(self):
         self.prepare_base()
@@ -117,6 +118,31 @@ class TestDesigner(unittest.TestCase):
         self.assertTrue(
             os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
             'Не обнаружена выгрузка в xml'
+        )
+
+    def test_dump_config_to_file_increment(self):
+        self.prepare_base()
+
+        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
+        if not path.exists(dir_xml_config_path):
+            os.mkdir(dir_xml_config_path)
+        self.designer.dump_config_to_files(dir_xml_config_path)
+
+        cur_catalog_file_time = os.path.getatime(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml'))
+
+        self.designer.load_config_from_file(self.cf_path)
+        self.designer.update_db_config()
+        self.designer.dump_config_to_files(dir_xml_config_path)
+
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник2.xml')),
+            'Выгрузка не была выполнена.'
+        )
+
+        self.assertEqual(
+            cur_catalog_file_time,
+            os.path.getatime(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
+            'Выгрузка не была инкриментальной'
         )
 
     def test_compare_conf(self):

@@ -70,6 +70,19 @@ class TestPlarform(unittest.TestCase):
                 'Не прошла проверка на получение последней версии'
             )
 
+    def test_platform_eq_operators(self):
+
+        vresion_max = utils.PlatformVersion('')
+        versuon_1 = utils.PlatformVersion('8.3.14.1522')
+        version_2 = utils.PlatformVersion('8.3.14.1422')
+        versuon_3 = utils.PlatformVersion('8.3.14.1522')
+
+        self.assertGreater(vresion_max, versuon_1, 'Проверка на сравление с максимальной версией не прошла.')
+        self.assertGreater(vresion_max, version_2, 'Проверка на сравление с максимальной версией не прошла.')
+        self.assertGreater(versuon_1, version_2, 'Проверка на сравление версий не прошла.')
+        self.assertEqual(versuon_1, versuon_3, 'Проверка на равенство не прошла')
+        self.assertNotEqual(versuon_1, version_2, 'Провенка на неравенство не прошла.')
+
 
 class TestUtils(unittest.TestCase):
 

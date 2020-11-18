@@ -16,7 +16,7 @@ class PlatformVersion:
         if self.version != '':
             version_weight = self.__get_version_weight()
         else:
-            version_weight = 2147483647
+            version_weight = 9999999999
         self.__version_weight: int = version_weight
 
     @property
