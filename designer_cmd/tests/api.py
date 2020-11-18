@@ -76,6 +76,9 @@ class TestDesigner(unittest.TestCase):
         self.dt_path = path.join(test_data_dir, '1Cv8.dt')
         self.cf_increment_path = path.join(test_data_dir, '1Cv8_increment.cf')
 
+        self.cfe_path1 = path.join(test_data_dir, 'test.cfe')
+        self.cfe_path2 = path.join(test_data_dir, 'test2.cfe')
+
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)
 
@@ -144,6 +147,76 @@ class TestDesigner(unittest.TestCase):
             os.path.getatime(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
             'Выгрузка не была инкриментальной'
         )
+
+    def test_dump_extension_to_file(self):
+        self.designer.create_base()
+        self.designer.load_db_from_file(self.dt_path)
+
+        cf_file_path = path.join(self.temp_path, 'test_.cfe')
+        self.designer.dump_extension_to_file(cf_file_path, 'test')
+
+        self.assertTrue(
+            os.path.exists(cf_file_path),
+            'Не обнаружена выгрузка расширения'
+        )
+
+    def export_all_extension(self):
+        cfe_dir_path = path.join(self.temp_path, 'cfe_dir')
+        if not path.exists(cfe_dir_path):
+            os.mkdir(cfe_dir_path)
+        clear_folder(cfe_dir_path)
+
+        self.designer.dump_extensions_to_files(cfe_dir_path)
+
+        return cfe_dir_path
+
+
+    def test_dump_extensions_to_files(self):
+        self.designer.create_base()
+        self.designer.load_db_from_file(self.dt_path)
+
+        cfe_dir_path = self.export_all_extension()
+
+        self.assertTrue(
+            os.path.exists(os.path.join(cfe_dir_path, 'test')),
+            'Выгрузка не сформирована.'
+        )
+
+        self.assertTrue(
+            os.path.exists(os.path.join(cfe_dir_path, 'test2')),
+            'Выгрузка не сформирована.'
+        )
+
+    def test_load_extension(self):
+        self.prepare_base()
+        self.designer.load_extension_from_file(self.cfe_path1, 'test')
+        self.designer.load_extension_from_file(self.cfe_path2, 'test2')
+
+        cfe_dir_path = self.export_all_extension()
+
+        self.assertTrue(
+            os.path.exists(os.path.join(cfe_dir_path, 'test')),
+            'Отсутствует расширение test.'
+        )
+
+        self.assertTrue(
+            os.path.exists(os.path.join(cfe_dir_path, 'test2')),
+            'Отсутствует расширение test2.'
+        )
+
+    def test_load_extension_from_files(self):
+        self.designer.create_base()
+        self.designer.load_db_from_file(self.dt_path)
+
+        cfe_dir_path = path.join(self.temp_path, 'cfe_dir', 'test')
+        self.designer.dump_extension_to_files(cfe_dir_path, 'test')
+
+        self.assertTrue(
+            os.path.exists(cfe_dir_path),
+            'Выгрузка не сформирована.'
+        )
+
+        self.designer.load_extension_from_files(cfe_dir_path, 'test')
 
     def test_compare_conf(self):
         self.prepare_base()

@@ -105,7 +105,10 @@ class Designer:
         result = execute_command(self.platform_path, params, self.connection.timeout)
 
         if result[0] != 0:
-            logger.error(f'При выполнении команды произошла ошибка: {open(debug_file_name).read()} {result[1]}')
+            with open(debug_file_name, encoding="utf-8") as f:
+                logger.error(f'При выполнении команды произошла ошибка:\n'
+                             f'{f.read()}\n'
+                             f'{result[1]}')
             os.remove(debug_file_name)
             raise SyntaxError('Не удалось выполнить команду!')
         os.remove(debug_file_name)
@@ -232,15 +235,56 @@ class Designer:
 
         self.__execute_command(f'DESIGNER', params)
 
+    def dump_extension_to_files(self, dir_path: str, extansion_name: str):
+        full_dir_path = os.path.abspath(dir_path)
+        logger.info(
+            f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
+        params = [
+            f'/DumpConfigToFiles {full_dir_path}',
+            f'-Extension {extansion_name}'
+        ]
+        self.__execute_command(f'DESIGNER', params)
+
     def dump_extensions_to_files(self, dir_path):
         full_dir_path = os.path.abspath(dir_path)
         logger.info(
             f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
         params = [
             f'/DumpConfigToFiles {full_dir_path}',
-            f'–AllExtensions',
-            '-force'
+            f'-AllExtensions',
         ]
+        self.__execute_command(f'DESIGNER', params)
+
+    def load_extension_from_file(self, extension_file_path: str, name: str):
+        """
+        Выполняет загрузку расширения из файла cfe в базу
+        :param extension_file_path:
+        :param name:
+        """
+        full_file_path = os.path.abspath(extension_file_path)
+        logger.info(
+            f'Загружаю расширения из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
+        params = [
+            f'/LoadCfg {full_file_path}',
+            f'-Extension {name}'
+        ]
+        self.__execute_command(f'DESIGNER', params)
+
+    def load_extension_from_files(self, extension_folder: str, name: str):
+        """
+        Выполняет загрузку расширения из каталога в базу
+        :param extension_folder:
+        :param name:
+        """
+        full_catalog_path = os.path.abspath(extension_folder)
+        logger.info(
+            f'Загружаю расширение c именем {name} из файлов {full_catalog_path} конфигурацию '
+            f'БД по соединению {self.connection}')
+        params = [
+            f'/LoadConfigFromFiles {full_catalog_path}',
+            f'-Extension {name}'
+        ]
+
         self.__execute_command(f'DESIGNER', params)
 
     def merge_config_with_file(self, cf_file_path: str, settings_path: str) -> None:

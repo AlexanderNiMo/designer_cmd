@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 
-class TestPlarform(unittest.TestCase):
+class TestPlatform(unittest.TestCase):
 
     def test_get_version_weight(self):
 

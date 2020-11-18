@@ -171,6 +171,8 @@ def __execute_windows_command(command: str, params: list, timeout: int) -> tuple
         return process.returncode, msg.strip()
     except subprocess.TimeoutExpired:
         return 1, 'Выполнение процесса вышло за рамки отведенного времени.'
+    except subprocess.CalledProcessError as e:
+        return 1, f'Ошибка выполнения команды {e}'
 
 
 def encoding() -> str:
