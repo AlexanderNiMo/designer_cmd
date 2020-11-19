@@ -22,11 +22,8 @@ def load_requirements(fname: str) -> list:
     return requirements
 
 
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except(IOError, ImportError):
-    long_description = open('README.md', encoding='utf-8').read()
+with open('README.md', encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name=module_name,
@@ -34,7 +31,7 @@ setup(
     author=module.__author__,
     author_email=module.__email__,
     license=module.__license__,
-    description=module.__doc__,
+    description='Пакет для автоматизации взаимодействия с пакетным режимом 1С.',
     long_description=long_description,
     long_description_content_type='text/markdown',
 
@@ -43,7 +40,7 @@ setup(
     classifiers=[
         'Intended Audience :: Developers',
         'Natural Language :: Russian',
-        'Operating System :: Windows',
+        'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython'
     ],
