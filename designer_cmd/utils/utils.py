@@ -4,6 +4,7 @@ import os.path as path
 import os
 import subprocess
 from functools import total_ordering
+import shutil
 
 logger = logging.getLogger(__file__)
 
@@ -201,12 +202,20 @@ def __execute_linux_command(command: str, params: list, timeout: int) -> str:
     pass
 
 
-def dir_is_clear(dir_path: str):
-    pass
-
-
 def xml_conf_version_file_exists(dir_path: str):
     version_file_name = "ConfigDumpInfo.xml"
     test_path = os.path.join(dir_path, version_file_name)
     return os.path.exists(test_path)
 
+
+def clear_folder(dir_path):
+    if path.exists(dir_path):
+        filelist = [f for f in os.listdir(dir_path)]
+        for file_name in filelist:
+            if '.gitkeep' in file_name:
+                continue
+            file_path = path.join(dir_path, file_name)
+            if path.isdir(file_path):
+                shutil.rmtree(file_path)
+            else:
+                os.remove(file_path)

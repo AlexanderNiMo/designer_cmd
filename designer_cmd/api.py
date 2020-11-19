@@ -1,9 +1,38 @@
-from designer_cmd.utils import get_platform_path, execute_command, xml_conf_version_file_exists, PlatformVersion
+from designer_cmd.utils import (get_platform_path, execute_command, xml_conf_version_file_exists,
+                                PlatformVersion, clear_folder)
 import os
 import logging
 import tempfile
+from typing import Optional
 
 logger = logging.getLogger(__file__)
+
+
+class RepositoryConnection:
+
+    def __init__(self, repository_path: str, user: str = '', password: str = ''):
+        self.password = password
+        self.user = user
+
+        full_repo_path = repository_path
+        if 'tcp' not in repository_path:
+            full_repo_path = os.path.abspath(repository_path)
+
+        self.repository_path = full_repo_path
+
+    def get_connection_params(self) -> list:
+        params = [f'/ConfigurationRepositoryF', f'{self.repository_path}']
+        if self.user != '':
+            params.append(f'/ConfigurationRepositoryN')
+            params.append(f'{self.user}')
+        if self.password != '':
+            params.append(f'/ConfigurationRepositoryP')
+            params.append(f'{self.password}')
+
+        return params
+
+    def __repr__(self):
+        return f'path: {self.repository_path} user: {self.user}'
 
 
 class Connection:
@@ -48,15 +77,15 @@ class Connection:
         """
         params = []
         if self.file_path != '':
-            params += [f'/F {self.file_path}']
+            params += [f'/F', f'{self.file_path}']
         elif self.ib_name != '':
-            params += [f'/IBName {self.ib_name}']
+            params += [f'/IBName', f'{self.ib_name}']
         else:
-            params += [f'/S {self.server_path}\\{self.server_base_ref}']
+            params += [f'/S', f'{self.server_path}\\{self.server_base_ref}']
 
         if self.user != '':
-            params.append(f'/N {self.user}')
-            params.append(f'/P {self.password}')
+            params += [f'/N', f'{self.user}']
+            params += [f'/P', f'{self.password}']
 
         return params
 
@@ -83,19 +112,30 @@ class Connection:
         return connection_path
 
 
+def have_repo_connection(func):
+
+    def warper(self, *args, **kwargs):
+        if self.repo_connection is None:
+            raise AttributeError('Не передано описание подключения к хранилищу!')
+        return func(self, *args, **kwargs)
+
+    return warper
+
+
 class Designer:
 
-    def __init__(self, platform_version: str, connection: Connection):
+    def __init__(self, platform_version: str, connection: Connection, repo_connection: RepositoryConnection = None):
 
+        self.repo_connection = repo_connection
         self.platform_version: PlatformVersion = PlatformVersion(platform_version)
         self.connection = connection
         self.platform_path = get_platform_path(self.platform_version)
 
     def __execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
         params = [mode]
-        params += command_params
         if connection_params_required:
             params += self.connection.get_connection_params()
+        params += command_params
         params += ['/DisableStartupDialogs /DisableStartupMessages']
         debug_file_name = self.add_debug_params(params)
 
@@ -130,7 +170,7 @@ class Designer:
         params = [f'{self.connection.get_connection_string()}']
         self.__execute_command('CREATEINFOBASE', params, False)
 
-    def update_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False):
+    def update_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False, on_server: bool = False):
         """
         Обновляет конфигурацию db. (соответствует команде /UpdateDBCfg)
 
@@ -138,6 +178,14 @@ class Designer:
         """
         logger.info(f'Обновляю конфигурацию БД по соединению {self.connection}')
         params = [f'/UpdateDBCfg']
+
+        if dynamic:
+            params.append('-Dynamic +')
+        if warnings_as_errors:
+            params.append('-WarningsAsErrors')
+        if on_server:
+            params.append('-Server')
+
         self.__execute_command(f'DESIGNER', params)
 
     def load_db_from_file(self, file_path: str) -> None:
@@ -164,16 +212,22 @@ class Designer:
         params = ['/DumpIB', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
-    def load_config_from_files(self, catalog_path: str) -> None:
+    def load_config_from_files(self, catalog_path: str, list_file: Optional[str] = None) -> None:
         """
         Загружает конфигурацию из файлов (соответствует команде /LoadConfigFromFiles)
 
+        :param list_file: путь к файлу со списком файлов к загрузке
         :param catalog_path: str - путь к каталогу из которого необходимо произвести загрузку.
         :return:
         """
         full_catalog_path = os.path.abspath(catalog_path)
         logger.info(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
-        params = [f'/LoadConfigFromFiles {full_catalog_path}']
+        params = [f'/LoadConfigFromFiles', f'{full_catalog_path}']
+
+        if list_file is not None and os.path.exists(list_file):
+            params.append(f'-listFile')
+            params.append(f'{os.path.abspath(list_file)}')
+
         self.__execute_command(f'DESIGNER', params)
 
     def dump_config_to_files(self, catalog_path: str, update: bool = True) -> None:
@@ -187,7 +241,7 @@ class Designer:
         full_catalog_path = os.path.abspath(catalog_path)
         logger.info(
             f'Выгружаю конфигурацию в файлы {full_catalog_path} по соединению {self.connection}')
-        params = [f'/DumpConfigToFiles {full_catalog_path}']
+        params = [f'/DumpConfigToFiles', f'{full_catalog_path}']
 
         increment_platform_version = PlatformVersion('8.3.10')
 
@@ -208,7 +262,7 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.info(
             f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
-        params = [f'/LoadCfg {full_file_path}']
+        params = [f'/LoadCfg', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
     def dump_config_to_file(self, file_path: str) -> None:
@@ -220,7 +274,7 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.info(
             f'Сохраняю конфигурацию в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
-        params = [f'/DumpCfg {full_file_path}']
+        params = [f'/DumpCfg', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
     def dump_extension_to_file(self, file_path: str, extension_name: str):
@@ -228,8 +282,8 @@ class Designer:
         logger.info(
             f'Сохраняю расширения в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
         params = [
-            f'/DumpConfigToFiles {full_file_path}',
-            f'-Extension {extension_name}',
+            f'/DumpConfigToFiles', f'{full_file_path}',
+            f'-Extension', f'{extension_name}',
             '-force'
         ]
 
@@ -240,8 +294,8 @@ class Designer:
         logger.info(
             f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
         params = [
-            f'/DumpConfigToFiles {full_dir_path}',
-            f'-Extension {extansion_name}'
+            f'/DumpConfigToFiles', f'{full_dir_path}',
+            f'-Extension', f'{extansion_name}'
         ]
         self.__execute_command(f'DESIGNER', params)
 
@@ -250,7 +304,7 @@ class Designer:
         logger.info(
             f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
         params = [
-            f'/DumpConfigToFiles {full_dir_path}',
+            f'/DumpConfigToFiles', f'{full_dir_path}',
             f'-AllExtensions',
         ]
         self.__execute_command(f'DESIGNER', params)
@@ -265,8 +319,8 @@ class Designer:
         logger.info(
             f'Загружаю расширения из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
         params = [
-            f'/LoadCfg {full_file_path}',
-            f'-Extension {name}'
+            f'/LoadCfg', f'{full_file_path}',
+            f'-Extension', f'{name}'
         ]
         self.__execute_command(f'DESIGNER', params)
 
@@ -281,9 +335,114 @@ class Designer:
             f'Загружаю расширение c именем {name} из файлов {full_catalog_path} конфигурацию '
             f'БД по соединению {self.connection}')
         params = [
-            f'/LoadConfigFromFiles {full_catalog_path}',
-            f'-Extension {name}'
+            f'/LoadConfigFromFiles', f'{full_catalog_path}',
+            f'-Extension', f'{name}'
         ]
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def create_repository(self):
+
+        logger.info(
+            f'Создание хранилища по подключению {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryCreate')
+        params.append('-AllowConfigurationChanges')
+        params.append('-ChangesAllowedRule')
+        params.append('ObjectIsEditableSupportEnabled')
+        params.append('-ChangesNotRecommendedRule')
+        params.append('ObjectIsEditableSupportEnabled')
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def add_user_to_repository(self, user, password: str = '', rights: Optional[str] = None ):
+        logger.info(
+            f'добавлеине пользователя в хранилище {self.repo_connection}'
+            f'из БД по соединению {self.connection}')
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryAddUser')
+        params.extend([
+            '-User', f'{user}',
+            '-Pwd', f'{password}',
+        ])
+        if rights is None:
+            rights = 'ReadOnly'
+
+        params.extend([
+            '-Rights', f'{rights}'
+        ])
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def unlock_objects_in_repository(self, objects_list: str):
+
+        file_path = os.path.abspath(objects_list)
+        logger.info(
+            f'Отправляю объекты в хранилище {self.repo_connection} по списку объектов из файла {file_path}'
+            f'БД по соединению {self.connection}')
+        params = self.repo_connection.get_connection_params()
+        params.extend([
+            f'/ConfigurationRepositoryLock',
+            f'-Objects', f'{file_path}'
+        ])
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def lock_objects_in_repository(self, objects: str, force: bool = False):
+
+        file_path = os.path.abspath(objects)
+        logger.info(
+            f'Захватываю объекты в хранилище {self.repo_connection} по списку объектов из файла {file_path}'
+            f'БД по соединению {self.connection}')
+        params = self.repo_connection.get_connection_params()
+        params.extend([
+            f'/ConfigurationRepositoryLock',
+            f'-Objects', f'{file_path}'
+        ])
+        if force:
+            params.append('-revised')
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def commit_config_to_repo(self, comment: str = '', objects: Optional[str] = None):
+        """
+        Выполняет отправку объектов в хранилище. операция /ConfigurationRepositoryCommit
+        """
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryCommit')
+
+        if objects is not None:
+            params.extend([
+                '-Objects', f'{objects}'
+            ])
+        params.extend([
+            '-comment', f'{comment}'
+        ])
+        params.append('-force')
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def dump_config_to_file_from_repo(self, file_path, version: Optional[str] = None):
+        full_file_path = os.path.abspath(file_path)
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryDumpCfg')
+        params.append(f'{full_file_path}')
+
+        cfg_version = -1
+        if version is not None:
+            cfg_version = version
+        params.extend([
+            '-v', f'{cfg_version}'
+        ])
 
         self.__execute_command(f'DESIGNER', params)
 
@@ -296,7 +455,16 @@ class Designer:
         :param settings_path: str : Путь к файлу настроек объединения
         :return:
         """
-        raise NotImplementedError
+        full_cf_file_path = os.path.abspath(cf_file_path)
+        full_path_settings_path = os.path.abspath(settings_path)
+        logger.info(
+            f'Объединение конфигурации по соединению {self.connection} с файлом {full_cf_file_path} '
+            f'по настройкам из файла {full_path_settings_path}')
+        params = [
+            f'/MergeCfg', f'{full_cf_file_path}',
+            f'-Settings', f'{full_path_settings_path}'
+        ]
+        self.__execute_command(f'DESIGNER', params)
 
     def compare_config_with_file(self, cf_file_path: str, report_path: str) -> None:
         """
@@ -330,3 +498,43 @@ class Designer:
             f'{full_report_path}'
         ]
         self.__execute_command(f'DESIGNER', params)
+
+
+def convert_cf_to_xml(
+        cf_file_path: str,
+        platform_version: str = '',
+        out_path: Optional[str] = None,
+        temp_path: Optional[str] = None,
+        clear_temp_folder: bool = True) -> str:
+    full_cf_path = os.path.abspath(cf_file_path)
+
+    if out_path is None:
+        out_path = os.path.join(
+            os.path.basename(full_cf_path),
+            'cf'
+        )
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
+
+    rm_dir = False
+    if temp_path is None:
+        temp_path = tempfile.mkdtemp()
+        rm_dir = True
+    _temp_path = os.path.join(temp_path, 'base')
+    os.mkdir(_temp_path)
+
+    connection = Connection('', '', _temp_path)
+    designer = Designer(platform_version, connection)
+
+    designer.create_base()
+    designer.load_config_from_file(full_cf_path)
+    designer.dump_config_to_files(out_path)
+
+    if clear_temp_folder:
+        if rm_dir:
+            clear_folder(temp_path)
+            os.rmdir(temp_path)
+        else:
+            clear_folder(temp_path)
+
+    return out_path

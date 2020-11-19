@@ -1,8 +1,8 @@
-from designer_cmd.api import Connection, Designer
+from designer_cmd.api import Connection, Designer, RepositoryConnection, convert_cf_to_xml
 import unittest
 import os.path as path
 import os
-import shutil
+from designer_cmd.utils.utils import clear_folder
 
 
 class TestConnection(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestConnection(unittest.TestCase):
         con = Connection(user='user', password='pass', file_path=loc_path)
         self.assertEqual(
             con.get_connection_params(),
-            [f'/F {path.abspath(loc_path)}', '/N user', '/P pass'],
+            [f'/F', f'{path.abspath(loc_path)}', '/N', f'user', '/P', f'pass'],
             'Не верно определена строка подключени для файловой базы'
         )
 
@@ -36,7 +36,7 @@ class TestConnection(unittest.TestCase):
         con = Connection(user='user', password='pass', server_path='192.168.1.1', server_base_ref='test')
         self.assertEqual(
             con.get_connection_params(),
-            ['/S 192.168.1.1\\test', '/N user', '/P pass'],
+            ['/S', '192.168.1.1\\test', '/N', 'user', '/P', 'pass'],
             'Не верно определена строка подключени для серверной базы'
         )
 
@@ -50,19 +50,6 @@ class TestConnection(unittest.TestCase):
             f'Usr=user Pwd=pass File={path.abspath(loc_path)}',
             'Не верно определена строка подключени для файловой базы'
         )
-
-
-def clear_folder(dir_path):
-    if path.exists(dir_path):
-        filelist = [f for f in os.listdir(dir_path)]
-        for file_name in filelist:
-            if '.gitkeep' in file_name:
-                continue
-            file_path = path.join(dir_path, file_name)
-            if path.isdir(file_path):
-                shutil.rmtree(file_path)
-            else:
-                os.remove(file_path)
 
 
 class TestDesigner(unittest.TestCase):
@@ -79,6 +66,10 @@ class TestDesigner(unittest.TestCase):
         self.cfe_path1 = path.join(test_data_dir, 'test.cfe')
         self.cfe_path2 = path.join(test_data_dir, 'test2.cfe')
 
+        self.repo_obj_list = path.join(test_data_dir, 'obj_list')
+        self.repo_obj_list_all = path.join(test_data_dir, 'obj_list_all_objects')
+        self.merge_settings = path.join(test_data_dir, 'MergeSettings.xml')
+
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)
 
@@ -92,6 +83,17 @@ class TestDesigner(unittest.TestCase):
         self.designer.create_base()
         self.designer.load_config_from_file(self.cf_path)
         self.designer.update_db_config()
+
+    def prepare_repo(self) -> str:
+        self.designer.create_base()
+        repo_path = path.join(self.temp_path, 'repo')
+        if not path.exists(repo_path):
+            os.mkdir(repo_path)
+        clear_folder(repo_path)
+        self.designer.repo_connection = RepositoryConnection(repo_path, 'user', 'password')
+        self.designer.create_repository()
+
+        return repo_path
 
     def test_load_create_db(self):
         self.designer.create_base()
@@ -170,7 +172,6 @@ class TestDesigner(unittest.TestCase):
 
         return cfe_dir_path
 
-
     def test_dump_extensions_to_files(self):
         self.designer.create_base()
         self.designer.load_db_from_file(self.dt_path)
@@ -217,6 +218,56 @@ class TestDesigner(unittest.TestCase):
         )
 
         self.designer.load_extension_from_files(cfe_dir_path, 'test')
+
+    def test_add_repository(self):
+        repo_path = self.prepare_repo()
+        self.assertTrue(os.path.exists(os.path.join(repo_path, 'cache')), 'Хранилище не создано.')
+
+    def test_add_user_to_repo(self):
+        self.prepare_repo()
+        self.designer.add_user_to_repository('user1', 'password1', rights='LockObjects')
+
+    def test_lock_obj_in_repository(self):
+        self.prepare_repo()
+        self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
+
+    def test_commit_repo(self):
+        self.prepare_repo()
+        self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
+        self.designer.merge_config_with_file(self.cf_increment_path, self.merge_settings)
+        self.designer.update_db_config()
+        self.designer.commit_config_to_repo('test', self.repo_obj_list_all)
+
+    def test_dump_config_from_repo(self):
+        self.test_commit_repo()
+        cf_file_path = path.join(self.temp_path, '1Cv81_repo.cf')
+        self.designer.dump_config_to_file_from_repo(cf_file_path)
+        self.assertTrue(os.path.exists(cf_file_path), 'Выгрузка кофигурации не создана!')
+
+        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
+        if not path.exists(dir_xml_config_path):
+            os.mkdir(dir_xml_config_path)
+
+        convert_cf_to_xml(cf_file_path, '', dir_xml_config_path)
+
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
+            'Commit не выполнен.'
+        )
+
+    def test_merge_cf(self):
+        self.prepare_base()
+        self.designer.merge_config_with_file(self.cf_increment_path, self.merge_settings)
+
+        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
+        if not path.exists(dir_xml_config_path):
+            os.mkdir(dir_xml_config_path)
+        self.designer.dump_config_to_files(dir_xml_config_path)
+
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
+            'Объединение не выполнено.'
+        )
 
     def test_compare_conf(self):
         self.prepare_base()
