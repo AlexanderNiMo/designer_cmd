@@ -550,7 +550,37 @@ def convert_cf_to_xml(
         out_path: Optional[str] = None,
         temp_path: Optional[str] = None,
         clear_temp_folder: bool = True) -> str:
-    full_cf_path = os.path.abspath(cf_file_path)
+
+    def convert_function(designer, full_cf_path, out_path):
+        designer.load_config_from_file(full_cf_path)
+        designer.dump_config_to_files(out_path)
+
+    return _convert_to_xml(cf_file_path, convert_function, platform_version, out_path, temp_path, clear_temp_folder)
+
+
+def convert_cfe_to_xml(
+        cf_file_path: str,
+        platform_version: str = '',
+        out_path: Optional[str] = None,
+        temp_path: Optional[str] = None,
+        clear_temp_folder: bool = True) -> str:
+
+    def convert_function(designer, full_cf_path, out_path):
+        designer.load_extension_from_file(full_cf_path)
+        designer.dump_extensions_to_files(out_path)
+
+    return _convert_to_xml(cf_file_path, convert_function, platform_version, out_path, temp_path, clear_temp_folder)
+
+
+def _convert_to_xml(
+        file_path: str,
+        function,
+        platform_version: str = '',
+        out_path: Optional[str] = None,
+        temp_path: Optional[str] = None,
+        clear_temp_folder: bool = True) -> str:
+
+    full_cf_path = os.path.abspath(file_path)
 
     if out_path is None:
         out_path = os.path.join(
@@ -571,8 +601,8 @@ def convert_cf_to_xml(
     designer = Designer(platform_version, connection)
 
     designer.create_base()
-    designer.load_config_from_file(full_cf_path)
-    designer.dump_config_to_files(out_path)
+
+    function(designer)
 
     if clear_temp_folder:
         if rm_dir:
