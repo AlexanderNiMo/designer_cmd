@@ -415,6 +415,11 @@ class Designer:
         """
         Выполняет отправку объектов в хранилище. операция /ConfigurationRepositoryCommit
         """
+
+        logger.info(
+            f'Отправка объектов в хранилище {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
         params = self.repo_connection.get_connection_params()
         params.append(f'/ConfigurationRepositoryCommit')
 
@@ -433,6 +438,10 @@ class Designer:
     def dump_config_to_file_from_repo(self, file_path, version: Optional[str] = None):
         full_file_path = os.path.abspath(file_path)
 
+        logger.info(
+            f'Выгрузка cf из хранилища {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
         params = self.repo_connection.get_connection_params()
         params.append(f'/ConfigurationRepositoryDumpCfg')
         params.append(f'{full_file_path}')
@@ -443,6 +452,41 @@ class Designer:
         params.extend([
             '-v', f'{cfg_version}'
         ])
+
+        self.__execute_command(f'DESIGNER', params)
+
+    def get_repo_report(self,
+                        report_file: str,
+                        v_begin: Optional[int] = None,
+                        v_end: Optional[int] = None,
+                        group_by_obj: bool = False,
+                        group_by_comment: bool = False):
+
+        full_report_file = os.path.abspath(report_file)
+
+        logger.info(
+            f'Формирование отчета в файл {full_report_file} из хранилища {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryReport')
+        params.append(f'{full_report_file}')
+
+        if v_begin is not None:
+            params.extend([
+                '-NBegin', f'{v_begin}'
+            ])
+
+        if v_begin is not None:
+            params.extend([
+                '-NEnd', f'{v_end}'
+            ])
+
+        if group_by_obj:
+            params.append('-GroupByObject')
+
+        if group_by_comment is not None:
+            params.append('-GroupByComment')
 
         self.__execute_command(f'DESIGNER', params)
 

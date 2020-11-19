@@ -232,11 +232,24 @@ class TestDesigner(unittest.TestCase):
         self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
 
     def test_commit_repo(self):
+
+        comment = 'test_test_test_1_2_3_4_5'
+
         self.prepare_repo()
         self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
         self.designer.merge_config_with_file(self.cf_increment_path, self.merge_settings)
         self.designer.update_db_config()
-        self.designer.commit_config_to_repo('test', self.repo_obj_list_all)
+        self.designer.commit_config_to_repo(comment, self.repo_obj_list_all)
+
+        report_path = path.join(self.temp_path, 'repo_report.xml')
+        self.designer.get_repo_report(report_path)
+
+        with open(report_path, 'r', encoding='utf-8') as f:
+            data = f.read()
+            self.assertTrue(
+                comment in data,
+                'Commit не создан.'
+            )
 
     def test_dump_config_from_repo(self):
         self.test_commit_repo()
@@ -252,8 +265,26 @@ class TestDesigner(unittest.TestCase):
 
         self.assertTrue(
             os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
-            'Commit не выполнен.'
+            'Выгрузка из хранилища не выполнена.'
         )
+
+    def test_get_repo_report(self):
+        self.prepare_repo()
+
+        report_path = path.join(self.temp_path, 'repo_report.xml')
+        self.designer.get_repo_report(report_path)
+
+        self.assertTrue(
+            os.path.exists(report_path),
+            'Отчет не сформирован.'
+        )
+
+        with open(report_path, 'r', encoding='utf-8') as f:
+            data = f.read()
+            self.assertTrue(
+                'Создание хранилища конфигурации' in data,
+                'В отчете нет необходимых данных'
+            )
 
     def test_merge_cf(self):
         self.prepare_base()
@@ -286,6 +317,17 @@ class TestDesigner(unittest.TestCase):
     def test_load_db_from_file(self):
         self.designer.create_base()
         self.designer.load_db_from_file(self.dt_path)
+
+        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
+        if not path.exists(dir_xml_config_path):
+            os.mkdir(dir_xml_config_path)
+
+        self.designer.dump_config_to_files(dir_xml_config_path)
+
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
+            'Выгрузка не была выполнена.'
+        )
 
     def tearDown(self):
         clear_folder(self.test_base_path)
