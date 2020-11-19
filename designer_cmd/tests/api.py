@@ -231,6 +231,10 @@ class TestDesigner(unittest.TestCase):
         self.prepare_repo()
         self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
 
+    def test_unlock_obj_in_repository(self):
+        self.prepare_repo()
+        self.designer.unlock_objects_in_repository(self.repo_obj_list_all)
+
     def test_commit_repo(self):
 
         comment = 'test_test_test_1_2_3_4_5'

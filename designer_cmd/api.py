@@ -3,7 +3,7 @@ from designer_cmd.utils import (get_platform_path, execute_command, xml_conf_ver
 import os
 import logging
 import tempfile
-from typing import Optional
+from typing import Optional, Callable
 
 logger = logging.getLogger(__file__)
 
@@ -359,7 +359,21 @@ class Designer:
         self.__execute_command(f'DESIGNER', params)
 
     @have_repo_connection
-    def add_user_to_repository(self, user, password: str = '', rights: Optional[str] = None ):
+    def add_user_to_repository(self, user: str, password: str = '', rights: Optional[str] = None ):
+        """
+        Добавляет пользователя в хранилище (ConfigurationRepositoryAddUser)
+
+        :type password: str
+        :type user: str
+        :type rights: str
+        :param user: Пользователь хранилища
+        :param password: Пароль к хранилищу
+        :param rights: Роль пользователя возможные занчения:
+            ReadOnly ‑ право на просмотр;
+            LockObjects ‑ право на захват объектов;
+            ManageConfigurationVersions ‑ право на изменение состава версий;
+            Administration ‑ право на административные функции;
+        """
         logger.info(
             f'добавлеине пользователя в хранилище {self.repo_connection}'
             f'из БД по соединению {self.connection}')
@@ -388,7 +402,7 @@ class Designer:
             f'БД по соединению {self.connection}')
         params = self.repo_connection.get_connection_params()
         params.extend([
-            f'/ConfigurationRepositoryLock',
+            f'/ConfigurationRepositoryUnLock',
             f'-Objects', f'{file_path}'
         ])
         self.__execute_command(f'DESIGNER', params)
@@ -574,7 +588,7 @@ def convert_cfe_to_xml(
 
 def _convert_to_xml(
         file_path: str,
-        function,
+        function: Callable[[Designer, str, str], None],
         platform_version: str = '',
         out_path: Optional[str] = None,
         temp_path: Optional[str] = None,
@@ -602,7 +616,7 @@ def _convert_to_xml(
 
     designer.create_base()
 
-    function(designer)
+    function(designer, full_cf_path, out_path)
 
     if clear_temp_folder:
         if rm_dir:
