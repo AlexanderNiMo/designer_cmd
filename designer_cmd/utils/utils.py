@@ -5,6 +5,7 @@ import os
 import subprocess
 from functools import total_ordering
 import shutil
+import ctypes
 
 logger = logging.getLogger(__file__)
 
@@ -155,6 +156,8 @@ def __execute_windows_command(command: str, params: list, timeout: int) -> tuple
     :param command:
     :return:
     """
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel32.SetConsoleOutputCP(65001)
     try:
         process = subprocess.run(
             args=[command] + params,

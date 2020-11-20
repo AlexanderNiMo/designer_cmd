@@ -115,10 +115,7 @@ class TestDesigner(unittest.TestCase):
 
     def test_dump_config_to_files(self):
         self.prepare_base()
-        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
-        if not path.exists(dir_xml_config_path):
-            os.mkdir(dir_xml_config_path)
-        self.designer.dump_config_to_files(dir_xml_config_path)
+        dir_xml_config_path = self.dump_to_files()
 
         self.assertTrue(
             os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
@@ -128,10 +125,7 @@ class TestDesigner(unittest.TestCase):
     def test_dump_config_to_file_increment(self):
         self.prepare_base()
 
-        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
-        if not path.exists(dir_xml_config_path):
-            os.mkdir(dir_xml_config_path)
-        self.designer.dump_config_to_files(dir_xml_config_path)
+        dir_xml_config_path = self.dump_to_files()
 
         cur_catalog_file_time = os.path.getatime(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml'))
 
@@ -261,16 +255,13 @@ class TestDesigner(unittest.TestCase):
         self.designer.dump_config_to_file_from_repo(cf_file_path)
         self.assertTrue(os.path.exists(cf_file_path), 'Выгрузка кофигурации не создана!')
 
-        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
-        if not path.exists(dir_xml_config_path):
-            os.mkdir(dir_xml_config_path)
+        self.check_common_module()
 
-        convert_cf_to_xml(cf_file_path, '', dir_xml_config_path)
-
-        self.assertTrue(
-            os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
-            'Выгрузка из хранилища не выполнена.'
-        )
+    def test_update_conf_from_repo(self):
+        self.test_commit_repo()
+        self.designer.load_db_from_file(self.dt_path)
+        self.designer.update_conf_from_repo()
+        self.check_common_module()
 
     def test_get_repo_report(self):
         self.prepare_repo()
@@ -290,19 +281,25 @@ class TestDesigner(unittest.TestCase):
                 'В отчете нет необходимых данных'
             )
 
+    def test_encoding(self):
+        self.designer.create_base()
+        self.designer.create_base()
+
+    def test_bind_cfg_to_repo(self):
+        self.prepare_repo()
+        self.designer.load_db_from_file(self.dt_path)
+
+        self.designer.bind_cfg_to_repo()
+        dir_xml_config_path = self.dump_to_files()
+
+        self.assertFalse(
+            os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
+            'База не была привязана.'
+        )
+
     def test_merge_cf(self):
         self.prepare_base()
         self.designer.merge_config_with_file(self.cf_increment_path, self.merge_settings)
-
-        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
-        if not path.exists(dir_xml_config_path):
-            os.mkdir(dir_xml_config_path)
-        self.designer.dump_config_to_files(dir_xml_config_path)
-
-        self.assertTrue(
-            os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
-            'Объединение не выполнено.'
-        )
 
     def test_compare_conf(self):
         self.prepare_base()
@@ -322,16 +319,28 @@ class TestDesigner(unittest.TestCase):
         self.designer.create_base()
         self.designer.load_db_from_file(self.dt_path)
 
-        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
-        if not path.exists(dir_xml_config_path):
-            os.mkdir(dir_xml_config_path)
-
-        self.designer.dump_config_to_files(dir_xml_config_path)
+        dir_xml_config_path = self.dump_to_files()
 
         self.assertTrue(
             os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
             'Выгрузка не была выполнена.'
         )
+
+    def check_common_module(self):
+        dir_xml_config_path = self.dump_to_files()
+
+        self.assertTrue(
+            os.path.exists(os.path.join(dir_xml_config_path, 'CommonModules\\ОбщийМодуль1.xml')),
+            'Объединение не выполнено.'
+        )
+
+    def dump_to_files(self) -> str:
+        dir_xml_config_path = path.join(self.temp_path, 'xml_config')
+        if not path.exists(dir_xml_config_path):
+            os.mkdir(dir_xml_config_path)
+
+        self.designer.dump_config_to_files(dir_xml_config_path)
+        return dir_xml_config_path
 
     def tearDown(self):
         clear_folder(self.test_base_path)

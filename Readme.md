@@ -94,8 +94,15 @@
             designer.unlock_objects_in_repository("path_to_file_with_list_obj") 
     - Помещение объектов в хранилище
     
-            designer.commit_config_to_repo('comment', 'repo_obj_list')                 
-
+            designer.commit_config_to_repo('comment', 'repo_obj_list')  
+          
+    - Обновление конфигурации базы из хранилища               
+            
+            designer.update_conf_from_repo()
+        
+    - Привязка конфигурации к хранилищу
+            
+            designer.bind_cfg_to_repo()
 
 #Планируемая фукциональность:
 

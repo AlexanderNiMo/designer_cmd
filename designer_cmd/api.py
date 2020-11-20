@@ -1,5 +1,5 @@
 from designer_cmd.utils import (get_platform_path, execute_command, xml_conf_version_file_exists,
-                                PlatformVersion, clear_folder)
+                                PlatformVersion, clear_folder, windows_platform)
 import os
 import logging
 import tempfile
@@ -145,7 +145,8 @@ class Designer:
         result = execute_command(self.platform_path, params, self.connection.timeout)
 
         if result[0] != 0:
-            with open(debug_file_name, encoding="utf-8") as f:
+            encoding = 'utf-8'
+            with open(debug_file_name, encoding=encoding) as f:
                 logger.error(f'При выполнении команды произошла ошибка:\n'
                              f'{f.read()}\n'
                              f'{result[1]}')
@@ -450,6 +451,9 @@ class Designer:
 
     @have_repo_connection
     def dump_config_to_file_from_repo(self, file_path, version: Optional[str] = None):
+        """
+        Выполняет выгрузку конфигурации из хранилища /ConfigurationRepositoryDumpCfg
+        """
         full_file_path = os.path.abspath(file_path)
 
         logger.info(
@@ -469,6 +473,44 @@ class Designer:
 
         self.__execute_command(f'DESIGNER', params)
 
+    @have_repo_connection
+    def update_conf_from_repo(self, version: Optional[int] = None):
+        """
+        Выполняет обновление конфигурации из хранилища /ConfigurationRepositoryUpdateCfg
+        """
+        logger.info(
+            f'Обновление конфигурации БД из хранилища {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryUpdateCfg')
+
+        cfg_version = -1
+        if version is not None:
+            cfg_version = version
+        params.extend([
+            '-v', f'{cfg_version}'
+        ])
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def bind_cfg_to_repo(self):
+        """
+        Выполняет привязку базы к хранилищу /ConfigurationRepositoryBindCfg
+        """
+        logger.info(
+            f'Привязка базы к хранилищу {self.repo_connection}'
+            f'БД по соединению {self.connection}')
+
+        params = self.repo_connection.get_connection_params()
+        params.append(f'/ConfigurationRepositoryBindCfg')
+        params.append('-forceBindAlreadyBindedUser')
+        params.append('-forceReplaceCfg')
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
     def get_repo_report(self,
                         report_file: str,
                         v_begin: Optional[int] = None,
