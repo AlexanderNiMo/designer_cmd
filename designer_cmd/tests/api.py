@@ -283,7 +283,9 @@ class TestDesigner(unittest.TestCase):
 
     def test_encoding(self):
         self.designer.create_base()
-        self.designer.create_base()
+        with self.assertRaises(SyntaxError) as ex:
+            self.designer.create_base()
+        self.assertEqual(ex.exception.msg, 'Не удалось выполнить команду!', 'Небыло вызвано исключение')
 
     def test_bind_cfg_to_repo(self):
         self.prepare_repo()

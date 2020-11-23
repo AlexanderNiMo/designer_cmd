@@ -5,9 +5,10 @@ import os
 import subprocess
 from functools import total_ordering
 import shutil
-import ctypes
+from ctypes import windll
 
-logger = logging.getLogger(__file__)
+
+logger = logging.getLogger(__name__)
 
 
 @total_ordering
@@ -156,8 +157,8 @@ def __execute_windows_command(command: str, params: list, timeout: int) -> tuple
     :param command:
     :return:
     """
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-    kernel32.SetConsoleOutputCP(65001)
+    prev_codepage = windll.kernel32.GetConsoleOutputCP()
+    windll.kernel32.SetConsoleOutputCP(65001)
     try:
         process = subprocess.run(
             args=[command] + params,
@@ -177,6 +178,8 @@ def __execute_windows_command(command: str, params: list, timeout: int) -> tuple
         return 1, 'Выполнение процесса вышло за рамки отведенного времени.'
     except subprocess.CalledProcessError as e:
         return 1, f'Ошибка выполнения команды {e}'
+    finally:
+        windll.kernel32.SetConsoleOutputCP(prev_codepage)
 
 
 def encoding() -> str:

@@ -5,7 +5,7 @@ import logging
 import tempfile
 from typing import Optional, Callable
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class RepositoryConnection:
@@ -145,11 +145,15 @@ class Designer:
         result = execute_command(self.platform_path, params, self.connection.timeout)
 
         if result[0] != 0:
-            encoding = 'utf-8'
-            with open(debug_file_name, encoding=encoding) as f:
-                logger.error(f'При выполнении команды произошла ошибка:\n'
-                             f'{f.read()}\n'
-                             f'{result[1]}')
+            try:
+                f = open(debug_file_name, encoding='utf-8')
+            except UnicodeDecodeError:
+                f = open(debug_file_name, encoding='cp1251')
+
+            logger.error(f'При выполнении команды произошла ошибка:\n'
+                         f'{f.read()}\n'
+                         f'{result[1]}')
+            f.close()
             os.remove(debug_file_name)
             raise SyntaxError('Не удалось выполнить команду!')
         os.remove(debug_file_name)
@@ -170,6 +174,14 @@ class Designer:
         logger.info(f'Создаю базу по соединению: {self.connection}')
         params = [f'{self.connection.get_connection_string()}']
         self.__execute_command('CREATEINFOBASE', params, False)
+
+    def manage_support(self):
+
+        logger.info(f'Снимаю конфигурацию БД по соединению {self.connection} с поддержки')
+
+        params = [f'/ManageCfgSupport', '-disableSupport', '-force']
+
+        self.__execute_command(f'DESIGNER', params)
 
     def update_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False, on_server: bool = False):
         """
@@ -226,8 +238,8 @@ class Designer:
         params = [f'/LoadConfigFromFiles', f'{full_catalog_path}']
 
         if list_file is not None and os.path.exists(list_file):
-            params.append(f'-listFile')
-            params.append(f'{os.path.abspath(list_file)}')
+            params.extend([f'-listFile', f'{os.path.abspath(list_file)}'])
+            params.extend([f'-Format', 'Hierarchical'])
 
         self.__execute_command(f'DESIGNER', params)
 
