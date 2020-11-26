@@ -351,6 +351,11 @@ class TestDesigner(unittest.TestCase):
             self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
         self.assertTrue(er.exception.args[0], 'Не удалось выполнить команду!')
 
+        self.designer.repo_connection.user = new_user
+        self.designer.repo_connection.password = new_passwd
+
+        self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
+
     def check_common_module(self):
         dir_xml_config_path = self.dump_to_files()
 
