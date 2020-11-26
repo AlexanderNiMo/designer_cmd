@@ -147,13 +147,15 @@ class Designer:
         if result[0] != 0:
             try:
                 f = open(debug_file_name, encoding='utf-8')
+                error_text = f.read()
             except UnicodeDecodeError:
                 f = open(debug_file_name, encoding='cp1251')
+                error_text = f.read()
+            f.close()
 
             logger.error(f'При выполнении команды произошла ошибка:\n'
-                         f'{f.read()}\n'
+                         f'{error_text}\n'
                          f'{result[1]}')
-            f.close()
             os.remove(debug_file_name)
             raise SyntaxError('Не удалось выполнить команду!')
         os.remove(debug_file_name)
@@ -519,6 +521,25 @@ class Designer:
         params.append(f'/ConfigurationRepositoryBindCfg')
         params.append('-forceBindAlreadyBindedUser')
         params.append('-forceReplaceCfg')
+
+        self.__execute_command(f'DESIGNER', params)
+
+    @have_repo_connection
+    def unbind_cfg_from_repo(self, force: bool = False, local: bool = False):
+        """
+        Отвязывает базу от хранилища /ConfigurationRepositoryBindCfg
+        :param force: выполняет подключение даже в том случае, если для данного пользователя уже есть конфигурация,
+            связанная с данным хранилищем
+        :param local: использовать параметры репозитория (локальная отвязка конфигурации)
+        """
+        if local:
+            params = self.repo_connection.get_connection_params()
+        else:
+            params = list()
+
+        params.append(f'/ConfigurationRepositoryUnbindCfg')
+        if force:
+            params.append('-force')
 
         self.__execute_command(f'DESIGNER', params)
 

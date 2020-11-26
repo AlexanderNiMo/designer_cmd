@@ -1,7 +1,7 @@
 import unittest
 
-from .api import TestDesigner, TestConnection
-from .utils import TestUtils, TestPlatform
+from .test_api import TestDesigner, TestConnection
+from .test_utils import TestUtils, TestPlatform
 
 __all__ = [
     'TestDesigner',

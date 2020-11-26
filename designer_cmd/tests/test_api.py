@@ -70,6 +70,9 @@ class TestDesigner(unittest.TestCase):
         self.repo_obj_list_all = path.join(test_data_dir, 'obj_list_all_objects')
         self.merge_settings = path.join(test_data_dir, 'MergeSettings.xml')
 
+        self.repo_user = 'user'
+        self.repo_password = 'password'
+
         self.conn = self.db_connection()
         self.designer = Designer('', self.conn)
 
@@ -90,7 +93,7 @@ class TestDesigner(unittest.TestCase):
         if not path.exists(repo_path):
             os.mkdir(repo_path)
         clear_folder(repo_path)
-        self.designer.repo_connection = RepositoryConnection(repo_path, 'user', 'password')
+        self.designer.repo_connection = RepositoryConnection(repo_path, self.repo_user, self.repo_password)
         self.designer.create_repository()
 
         return repo_path
@@ -327,6 +330,26 @@ class TestDesigner(unittest.TestCase):
             os.path.exists(os.path.join(dir_xml_config_path, 'Catalogs\\Справочник1.xml')),
             'Выгрузка не была выполнена.'
         )
+
+    def test_unbind_cfg_from_repo(self):
+        self.prepare_repo()
+        new_user = 'new_user'
+        new_passwd = 'passwd'
+        self.designer.add_user_to_repository(new_user, new_passwd, 'LockObjects')
+
+        self.designer.unbind_cfg_from_repo(True, True)
+
+        self.designer.repo_connection.user = new_user
+        self.designer.repo_connection.password = new_passwd
+
+        self.designer.bind_cfg_to_repo()
+
+        self.designer.repo_connection.user = self.repo_user
+        self.designer.repo_connection.password = self.repo_password
+
+        with self.assertRaises(SyntaxError) as er:
+            self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
+        self.assertTrue(er.exception.args[0], 'Не удалось выполнить команду!')
 
     def check_common_module(self):
         dir_xml_config_path = self.dump_to_files()
