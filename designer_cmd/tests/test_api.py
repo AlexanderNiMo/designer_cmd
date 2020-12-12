@@ -216,6 +216,30 @@ class TestDesigner(unittest.TestCase):
 
         self.designer.load_extension_from_files(cfe_dir_path, 'test')
 
+    def test_delete_extension(self):
+        self.prepare_base()
+        ext_name = 'test'
+
+        self.designer.load_extension_from_file(self.cfe_path1, ext_name)
+
+        self.designer.delete_extension(ext_name)
+
+        with self.assertRaises(SyntaxError) as ex:
+            self.designer.delete_extension(ext_name)
+
+        self.assertIn(
+            'расширение конфигурации с указанным именем не найдено: test',
+            ex.exception.args[0],
+            'Ошибка не включает в себя текст ошибки поиска расширения'
+        )
+
+    def test_check_extension(self):
+        self.prepare_base()
+        ext_name = 'test'
+
+        self.designer.load_extension_from_file(self.cfe_path1, ext_name)
+        self.designer.check_apply_extension(ext_name)
+
     def test_add_repository(self):
         repo_path = self.prepare_repo()
         self.assertTrue(os.path.exists(os.path.join(repo_path, 'cache')), 'Хранилище не создано.')
@@ -288,7 +312,7 @@ class TestDesigner(unittest.TestCase):
         self.designer.create_base()
         with self.assertRaises(SyntaxError) as ex:
             self.designer.create_base()
-        self.assertEqual(ex.exception.msg, 'Не удалось выполнить команду!', 'Небыло вызвано исключение')
+        self.assertIn('Указанная информационная база уже существует.', ex.exception.msg, 'Небыло вызвано исключение')
 
     def test_bind_cfg_to_repo(self):
         self.prepare_repo()
@@ -349,7 +373,8 @@ class TestDesigner(unittest.TestCase):
 
         with self.assertRaises(SyntaxError) as er:
             self.designer.lock_objects_in_repository(self.repo_obj_list_all, True)
-        self.assertTrue(er.exception.args[0], 'Не удалось выполнить команду!')
+        self.assertIn('Ошибка захвата объектов в хранилище', er.exception.msg,
+                      'Ошибка захвата объектов не была выброшена.')
 
         self.designer.repo_connection.user = new_user
         self.designer.repo_connection.password = new_passwd

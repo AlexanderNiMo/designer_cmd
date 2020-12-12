@@ -46,19 +46,29 @@
         
         # Выгрузка всех расширений
         designer.dump_extensions_to_files(cfe_dir_path)
+        
+- Проверка применения расширения\расширений
+
+        self.designer.check_apply_extension('extension_name')
+        # Выгрузка всех расширений
+        self.designer.check_apply_extension()
+
+- Удаление расширения\вех расширений из базы
+
+        self.designer.delete_extension('extension_name')
+        # Всех раширений:
+        self.designer.delete_extension()
       
 - Выгрузка/Загрузка расширений из файлов cfe
         
         designer.dump_extension_to_file('cfe_file', 'extension_name')
         designer.load_extension_from_file('cfe_file', 'extension_name')
-        
-        
+                
 - Выгрузка/Загрузка dt.
 
         designer.load_db_from_file('dt_path')
         designer.dump_db_to_file('dt_path')
         
-
 - Сравнение конфигурации с файлом cf
         
         designer.compare_config_with_file('path_to_cf', 'report_path')
@@ -66,7 +76,6 @@
 - Объединение конфигурации с файлом cf
 
         designer.merge_config_with_file('path_to_cf', 'path_to_merge_settings')      
-
 
 - Обновление структуры конфигурации
 

@@ -153,11 +153,10 @@ class Designer:
                 error_text = f.read()
             f.close()
 
-            logger.error(f'При выполнении команды произошла ошибка:\n'
-                         f'{error_text}\n'
-                         f'{result[1]}')
+            error_text = f'При выполнении команды произошла ошибка:\n {error_text}\n {result[1]}'
+            logger.error(error_text)
             os.remove(debug_file_name)
-            raise SyntaxError('Не удалось выполнить команду!')
+            raise SyntaxError(f'Не удалось выполнить команду! подробно: {error_text}')
         os.remove(debug_file_name)
 
     def add_debug_params(self, params) -> str:
@@ -173,13 +172,13 @@ class Designer:
         Соответствует режиму CREATEINFOBASE <строка соединения>
 
         """
-        logger.info(f'Создаю базу по соединению: {self.connection}')
+        logger.debug(f'Создаю базу по соединению: {self.connection}')
         params = [f'{self.connection.get_connection_string()}']
         self.__execute_command('CREATEINFOBASE', params, False)
 
     def manage_support(self):
 
-        logger.info(f'Снимаю конфигурацию БД по соединению {self.connection} с поддержки')
+        logger.debug(f'Снимаю конфигурацию БД по соединению {self.connection} с поддержки')
 
         params = [f'/ManageCfgSupport', '-disableSupport', '-force']
 
@@ -191,7 +190,7 @@ class Designer:
 
         :return:
         """
-        logger.info(f'Обновляю конфигурацию БД по соединению {self.connection}')
+        logger.debug(f'Обновляю конфигурацию БД по соединению {self.connection}')
         params = [f'/UpdateDBCfg']
 
         if dynamic:
@@ -211,7 +210,7 @@ class Designer:
         :return:
         """
         full_file_path = os.path.abspath(file_path)
-        logger.info(f'Загружаю файл dt {full_file_path} в БД по соединению {self.connection}')
+        logger.debug(f'Загружаю файл dt {full_file_path} в БД по соединению {self.connection}')
         params = ['/RestoreIB', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
@@ -223,7 +222,7 @@ class Designer:
         :return:
         """
         full_file_path = os.path.abspath(file_path)
-        logger.info(f'Выгружаю файл dt по пути {full_file_path} из БД по соединению {self.connection}')
+        logger.debug(f'Выгружаю файл dt по пути {full_file_path} из БД по соединению {self.connection}')
         params = ['/DumpIB', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
@@ -236,7 +235,7 @@ class Designer:
         :return:
         """
         full_catalog_path = os.path.abspath(catalog_path)
-        logger.info(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
+        logger.debug(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
         params = [f'/LoadConfigFromFiles', f'{full_catalog_path}']
 
         if list_file is not None and os.path.exists(list_file):
@@ -254,7 +253,7 @@ class Designer:
         :return:
         """
         full_catalog_path = os.path.abspath(catalog_path)
-        logger.info(
+        logger.debug(
             f'Выгружаю конфигурацию в файлы {full_catalog_path} по соединению {self.connection}')
         params = [f'/DumpConfigToFiles', f'{full_catalog_path}']
 
@@ -275,7 +274,7 @@ class Designer:
         :return:
         """
         full_file_path = os.path.abspath(file_path)
-        logger.info(
+        logger.debug(
             f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
         params = [f'/LoadCfg', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
@@ -287,14 +286,14 @@ class Designer:
         :return:
         """
         full_file_path = os.path.abspath(file_path)
-        logger.info(
+        logger.debug(
             f'Сохраняю конфигурацию в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
         params = [f'/DumpCfg', f'{full_file_path}']
         self.__execute_command(f'DESIGNER', params)
 
     def dump_extension_to_file(self, file_path: str, extension_name: str):
         full_file_path = os.path.abspath(file_path)
-        logger.info(
+        logger.debug(
             f'Сохраняю расширения в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
         params = [
             f'/DumpConfigToFiles', f'{full_file_path}',
@@ -306,7 +305,7 @@ class Designer:
 
     def dump_extension_to_files(self, dir_path: str, extansion_name: str):
         full_dir_path = os.path.abspath(dir_path)
-        logger.info(
+        logger.debug(
             f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
         params = [
             f'/DumpConfigToFiles', f'{full_dir_path}',
@@ -316,7 +315,7 @@ class Designer:
 
     def dump_extensions_to_files(self, dir_path):
         full_dir_path = os.path.abspath(dir_path)
-        logger.info(
+        logger.debug(
             f'Сохраняю расширения в файл {full_dir_path} из конфигурации БД по соединению {self.connection}')
         params = [
             f'/DumpConfigToFiles', f'{full_dir_path}',
@@ -331,7 +330,7 @@ class Designer:
         :param name:
         """
         full_file_path = os.path.abspath(extension_file_path)
-        logger.info(
+        logger.debug(
             f'Загружаю расширения из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
         params = [
             f'/LoadCfg', f'{full_file_path}',
@@ -346,7 +345,7 @@ class Designer:
         :param name:
         """
         full_catalog_path = os.path.abspath(extension_folder)
-        logger.info(
+        logger.debug(
             f'Загружаю расширение c именем {name} из файлов {full_catalog_path} конфигурацию '
             f'БД по соединению {self.connection}')
         params = [
@@ -356,10 +355,43 @@ class Designer:
 
         self.__execute_command(f'DESIGNER', params)
 
+    def delete_extension(self, extension_name: Optional[str] = None):
+        """
+        Выполняет удаление расширения из базы (/DeleteCfg)
+        :param extension_name: имя расширения
+        """
+        logger.debug(f'Удаляю расширение c именем {extension_name} из базы. ')
+
+        params = [f'/DeleteCfg']
+
+        if extension_name is None:
+            params.append('-AllExtensions')
+        else:
+            params.extend(['-Extension', extension_name])
+
+        self.__execute_command(f'DESIGNER', params)
+
+    def check_apply_extension(self, extension_name: Optional[str] = None):
+        """
+        Выполнить проверку применения расширения к конфигурации
+        (соответствует команде /CheckCanApplyConfigurationExtensions)
+        :param extension_name: Имя расширения
+        :return:
+        """
+
+        logger.debug(f'Проверяю возможность применения расширения {extension_name}')
+
+        params = ['/CheckCanApplyConfigurationExtensions']
+
+        if extension_name is not None:
+            params.extend(['-Extension ', extension_name])
+
+        self.__execute_command(f'DESIGNER', params)
+
     @have_repo_connection
     def create_repository(self):
 
-        logger.info(
+        logger.debug(
             f'Создание хранилища по подключению {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -389,7 +421,7 @@ class Designer:
             ManageConfigurationVersions ‑ право на изменение состава версий;
             Administration ‑ право на административные функции;
         """
-        logger.info(
+        logger.debug(
             f'добавлеине пользователя в хранилище {self.repo_connection}'
             f'из БД по соединению {self.connection}')
 
@@ -409,24 +441,24 @@ class Designer:
         self.__execute_command(f'DESIGNER', params)
 
     @have_repo_connection
-    def unlock_objects_in_repository(self, objects_list: str):
+    def unlock_objects_in_repository(self, objects_list: Optional[str] = None):
 
         file_path = os.path.abspath(objects_list)
-        logger.info(
+        logger.debug(
             f'Отправляю объекты в хранилище {self.repo_connection} по списку объектов из файла {file_path}'
             f'БД по соединению {self.connection}')
         params = self.repo_connection.get_connection_params()
-        params.extend([
-            f'/ConfigurationRepositoryUnLock',
-            f'-Objects', f'{file_path}'
-        ])
+        params.append(f'/ConfigurationRepositoryUnLock')
+        if objects_list is not None:
+            params.extend([f'-Objects', f'{file_path}'])
+
         self.__execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def lock_objects_in_repository(self, objects: str, force: bool = False):
 
         file_path = os.path.abspath(objects)
-        logger.info(
+        logger.debug(
             f'Захватываю объекты в хранилище {self.repo_connection} по списку объектов из файла {file_path}'
             f'БД по соединению {self.connection}')
         params = self.repo_connection.get_connection_params()
@@ -445,7 +477,7 @@ class Designer:
         Выполняет отправку объектов в хранилище. операция /ConfigurationRepositoryCommit
         """
 
-        logger.info(
+        logger.debug(
             f'Отправка объектов в хранилище {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -470,7 +502,7 @@ class Designer:
         """
         full_file_path = os.path.abspath(file_path)
 
-        logger.info(
+        logger.debug(
             f'Выгрузка cf из хранилища {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -492,7 +524,7 @@ class Designer:
         """
         Выполняет обновление конфигурации из хранилища /ConfigurationRepositoryUpdateCfg
         """
-        logger.info(
+        logger.debug(
             f'Обновление конфигурации БД из хранилища {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -513,7 +545,7 @@ class Designer:
         """
         Выполняет привязку базы к хранилищу /ConfigurationRepositoryBindCfg
         """
-        logger.info(
+        logger.debug(
             f'Привязка базы к хранилищу {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -532,6 +564,7 @@ class Designer:
             связанная с данным хранилищем
         :param local: использовать параметры репозитория (локальная отвязка конфигурации)
         """
+        logger.debug(f'Отвязываю базу от хранилища {self.repo_connection}')
         if local:
             params = self.repo_connection.get_connection_params()
         else:
@@ -550,10 +583,9 @@ class Designer:
                         v_end: Optional[int] = None,
                         group_by_obj: bool = False,
                         group_by_comment: bool = False):
-
         full_report_file = os.path.abspath(report_file)
 
-        logger.info(
+        logger.debug(
             f'Формирование отчета в файл {full_report_file} из хранилища {self.repo_connection}'
             f'БД по соединению {self.connection}')
 
@@ -590,7 +622,7 @@ class Designer:
         """
         full_cf_file_path = os.path.abspath(cf_file_path)
         full_path_settings_path = os.path.abspath(settings_path)
-        logger.info(
+        logger.debug(
             f'Объединение конфигурации по соединению {self.connection} с файлом {full_cf_file_path} '
             f'по настройкам из файла {full_path_settings_path}')
         params = [
@@ -609,7 +641,7 @@ class Designer:
         """
         full_cf_file_path = os.path.abspath(cf_file_path)
         full_report_path = os.path.abspath(report_path)
-        logger.info(
+        logger.debug(
             f'Сравниваю конфигурацию по соединению {self.connection} с файлом {full_cf_file_path} '
             f'для сохранения отчета по пути {full_report_path} ')
         params = [
