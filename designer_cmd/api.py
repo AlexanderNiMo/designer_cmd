@@ -31,6 +31,11 @@ class RepositoryConnection:
 
         return params
 
+    def replace_credentials(self, str_with_cred: str) -> str:
+        text = str_with_cred.replace(self.password, f'pass{"*"*len(self.password)}')
+        text = text.replace(self.user, f'user{"*"*len(self.user)}')
+        return text
+
     def __repr__(self):
         return f'path: {self.repository_path} user: {self.user}'
 
@@ -101,6 +106,11 @@ class Connection:
         else:
             raise NotImplementedError('Создание базы в серверном варианте не реализованно.')
 
+    def replace_credentials(self, str_with_cred: str) -> str:
+        text = str_with_cred.replace(self.password, f'pass{"*"*len(self.password)}')
+        text = text.replace(self.user, f'user{"*"*len(self.user)}')
+        return text
+
     def __repr__(self):
         if self.file_path != '':
             connection_path = f'File: {self.file_path}'
@@ -140,6 +150,10 @@ class Designer:
         debug_file_name = self.add_debug_params(params)
 
         str_command = ' '.join(params)
+        str_command = self.connection.replace_credentials(str_command)
+        if self.repo_connection is not None:
+            str_command = self.repo_connection.replace_credentials(str_command)
+
         logger.debug(f'Выполняю команду {self.platform_path} {str_command}')
 
         result = execute_command(self.platform_path, params, self.connection.timeout)
@@ -153,7 +167,11 @@ class Designer:
                 error_text = f.read()
             f.close()
 
-            error_text = f'При выполнении команды произошла ошибка:\n {error_text}\n {result[1]}'
+            ex_error = self.connection.replace_credentials(result[1])
+            if self.repo_connection is not None:
+                ex_error = self.repo_connection.replace_credentials(ex_error)
+
+            error_text = f'При выполнении команды произошла ошибка:\n {error_text}\n {ex_error}'
             logger.error(error_text)
             os.remove(debug_file_name)
             raise SyntaxError(f'Не удалось выполнить команду! подробно: {error_text}')
