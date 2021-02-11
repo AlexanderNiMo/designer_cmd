@@ -1,8 +1,9 @@
-from designer_cmd.api import Connection, Designer, RepositoryConnection, convert_cf_to_xml
+from designer_cmd.api import Connection, Designer, RepositoryConnection, convert_cf_to_xml, Enterprise
 import unittest
 import os.path as path
 import os
 from designer_cmd.utils.utils import clear_folder
+from json import dump
 
 
 class TestConnection(unittest.TestCase):
@@ -52,10 +53,12 @@ class TestConnection(unittest.TestCase):
         )
 
 
-class TestDesigner(unittest.TestCase):
+class DataPrepearer(unittest.TestCase):
 
     def setUp(self):
         test_data_dir = path.join(path.dirname(__file__), 'test_data')
+
+        self.test_data_dir = test_data_dir
 
         self.temp_path = path.join(test_data_dir, 'temp')
         self.test_base_path = path.join(test_data_dir, 'base')
@@ -79,6 +82,10 @@ class TestDesigner(unittest.TestCase):
         clear_folder(self.test_base_path)
         clear_folder(self.temp_path)
 
+    def tearDown(self):
+        clear_folder(self.test_base_path)
+        clear_folder(self.temp_path)
+
     def db_connection(self):
         return Connection(file_path=self.test_base_path)
 
@@ -86,6 +93,34 @@ class TestDesigner(unittest.TestCase):
         self.designer.create_base()
         self.designer.load_config_from_file(self.cf_path)
         self.designer.update_db_config()
+
+
+class TestEnterprise(DataPrepearer):
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.enterprise = Enterprise('', self.conn)
+        self.prepare_base()
+        self.epf_path = path.join(self.test_data_dir, 'test_epf.epf')
+
+    def test_execute_epf(self):
+        file_path = path.join(self.temp_path, 'test.txt')
+        text_data = 'test1'
+        json_file = path.join(self.temp_path, 'test.json')
+        with open(json_file, r'w') as f:
+            dump({'text': text_data, 'file': file_path}, f)
+
+        self.enterprise.run_epf_erf(
+            self.epf_path,
+            json_file
+        )
+        self.assertTrue(path.exists(file_path), 'Файл не создан!')
+        with open(file_path, r'r', encoding='utf-8-sig') as f:
+            lines = f.readlines()
+            self.assertEqual(text_data, lines[0], 'Текст не соответствует ожиданию.')
+
+
+class TestDesigner(DataPrepearer):
 
     def prepare_repo(self) -> str:
         self.designer.create_base()
@@ -396,7 +431,3 @@ class TestDesigner(unittest.TestCase):
 
         self.designer.dump_config_to_files(dir_xml_config_path)
         return dir_xml_config_path
-
-    def tearDown(self):
-        clear_folder(self.test_base_path)
-        clear_folder(self.temp_path)

@@ -116,7 +116,15 @@
     - Привязка конфигурации к хранилищу
             
             designer.unbind_cfg_from_repo()
-
+            
+- Запуск обработки в базе:
+    
+    
+        from designer_cmd import api   
+        conn = api.Connection(user='User', password='Password', file_path='DB_Path')
+        ent = api.Enterprise('8.3.12.1254', self.conn)
+        ent.run_epf_erf(path_to_epf, 'params_to_c')
+        
 #Планируемая фукциональность:
 
 - Работа в контексте linux

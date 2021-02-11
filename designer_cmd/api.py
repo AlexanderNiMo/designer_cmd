@@ -132,7 +132,7 @@ def have_repo_connection(func):
     return warper
 
 
-class Designer:
+class AbcExecutor:
 
     def __init__(self, platform_version: str, connection: Connection, repo_connection: RepositoryConnection = None):
 
@@ -141,7 +141,7 @@ class Designer:
         self.connection = connection
         self.platform_path = get_platform_path(self.platform_version)
 
-    def __execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
+    def execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
         params = [mode]
         if connection_params_required:
             params += self.connection.get_connection_params()
@@ -184,6 +184,28 @@ class Designer:
         os.close(debug_file_name[0])
         return debug_file_name[1]
 
+
+class Enterprise(AbcExecutor):
+
+    def run_epf_erf(self, ep_x_path: str, c_string: str = None):
+        """
+        Запускает обработку\отчет в базе
+        (соответствует команде /Execute )
+        :param ep_x_path: Путь к файлу cf, который необходимо сравнить с конфигурацией.
+        :param: c_string: Строка, которая будет переданна в /C.
+        :return:
+        """
+        logger.debug(f'Запускаю обработку {ep_x_path} в базе: {self.connection}')
+        params = [f'/Execute', ep_x_path]
+        if c_string:
+            params.append('/C')
+            params.append(c_string)
+
+        self.execute_command('ENTERPRISE ', params)
+
+
+class Designer(AbcExecutor):
+
     def create_base(self):
         """
         Создает базу данных.
@@ -192,7 +214,7 @@ class Designer:
         """
         logger.debug(f'Создаю базу по соединению: {self.connection}')
         params = [f'{self.connection.get_connection_string()}']
-        self.__execute_command('CREATEINFOBASE', params, False)
+        self.execute_command('CREATEINFOBASE', params, False)
 
     def manage_support(self):
 
@@ -200,7 +222,7 @@ class Designer:
 
         params = [f'/ManageCfgSupport', '-disableSupport', '-force']
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def update_db_config(self, dynamic: bool = False, warnings_as_errors: bool = False, on_server: bool = False):
         """
@@ -218,7 +240,7 @@ class Designer:
         if on_server:
             params.append('-Server')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def load_db_from_file(self, file_path: str) -> None:
         """
@@ -230,7 +252,7 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.debug(f'Загружаю файл dt {full_file_path} в БД по соединению {self.connection}')
         params = ['/RestoreIB', f'{full_file_path}']
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_db_to_file(self, file_path: str) -> None:
         """
@@ -242,7 +264,7 @@ class Designer:
         full_file_path = os.path.abspath(file_path)
         logger.debug(f'Выгружаю файл dt по пути {full_file_path} из БД по соединению {self.connection}')
         params = ['/DumpIB', f'{full_file_path}']
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def load_config_from_files(self, catalog_path: str, list_file: Optional[str] = None) -> None:
         """
@@ -260,7 +282,7 @@ class Designer:
             params.extend([f'-listFile', f'{os.path.abspath(list_file)}'])
             params.extend([f'-Format', 'Hierarchical'])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_config_to_files(self, catalog_path: str, update: bool = True) -> None:
         """
@@ -282,7 +304,7 @@ class Designer:
             params.append('-update')
             params.append('-force')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def load_config_from_file(self, file_path: str) -> None:
         """
@@ -295,7 +317,7 @@ class Designer:
         logger.debug(
             f'Загружаю конфигурацию из файла {full_file_path} в конфигурацию БД по соединению {self.connection}')
         params = [f'/LoadCfg', f'{full_file_path}']
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_config_to_file(self, file_path: str) -> None:
         """
@@ -307,7 +329,7 @@ class Designer:
         logger.debug(
             f'Сохраняю конфигурацию в файл {full_file_path} из конфигурации БД по соединению {self.connection}')
         params = [f'/DumpCfg', f'{full_file_path}']
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_extension_to_file(self, file_path: str, extension_name: str):
         full_file_path = os.path.abspath(file_path)
@@ -319,7 +341,7 @@ class Designer:
             '-force'
         ]
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_extension_to_files(self, dir_path: str, extansion_name: str):
         full_dir_path = os.path.abspath(dir_path)
@@ -329,7 +351,7 @@ class Designer:
             f'/DumpConfigToFiles', f'{full_dir_path}',
             f'-Extension', f'{extansion_name}'
         ]
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def dump_extensions_to_files(self, dir_path):
         full_dir_path = os.path.abspath(dir_path)
@@ -339,7 +361,7 @@ class Designer:
             f'/DumpConfigToFiles', f'{full_dir_path}',
             f'-AllExtensions',
         ]
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def load_extension_from_file(self, extension_file_path: str, name: str):
         """
@@ -354,7 +376,7 @@ class Designer:
             f'/LoadCfg', f'{full_file_path}',
             f'-Extension', f'{name}'
         ]
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def load_extension_from_files(self, extension_folder: str, name: str):
         """
@@ -371,7 +393,7 @@ class Designer:
             f'-Extension', f'{name}'
         ]
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def delete_extension(self, extension_name: Optional[str] = None):
         """
@@ -387,7 +409,7 @@ class Designer:
         else:
             params.extend(['-Extension', extension_name])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def check_apply_extension(self, extension_name: Optional[str] = None):
         """
@@ -404,7 +426,7 @@ class Designer:
         if extension_name is not None:
             params.extend(['-Extension ', extension_name])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def create_repository(self):
@@ -421,7 +443,7 @@ class Designer:
         params.append('-ChangesNotRecommendedRule')
         params.append('ObjectIsEditableSupportEnabled')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def add_user_to_repository(self, user: str, password: str = '', rights: Optional[str] = None ):
@@ -456,7 +478,7 @@ class Designer:
             '-Rights', f'{rights}'
         ])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def unlock_objects_in_repository(self, objects_list: Optional[str] = None):
@@ -470,7 +492,7 @@ class Designer:
         if objects_list is not None:
             params.extend([f'-Objects', f'{file_path}'])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def lock_objects_in_repository(self, objects: str, force: bool = False):
@@ -487,7 +509,7 @@ class Designer:
         if force:
             params.append('-revised')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def commit_config_to_repo(self, comment: str = '', objects: Optional[str] = None):
@@ -511,7 +533,7 @@ class Designer:
         ])
         params.append('-force')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def dump_config_to_file_from_repo(self, file_path, version: Optional[str] = None):
@@ -535,7 +557,7 @@ class Designer:
             '-v', f'{cfg_version}'
         ])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def update_conf_from_repo(self, version: Optional[int] = None):
@@ -556,7 +578,7 @@ class Designer:
             '-v', f'{cfg_version}'
         ])
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def bind_cfg_to_repo(self):
@@ -572,7 +594,7 @@ class Designer:
         params.append('-forceBindAlreadyBindedUser')
         params.append('-forceReplaceCfg')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def unbind_cfg_from_repo(self, force: bool = False, local: bool = False):
@@ -592,7 +614,7 @@ class Designer:
         if force:
             params.append('-force')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
     def get_repo_report(self,
@@ -627,7 +649,7 @@ class Designer:
         if group_by_comment is not None:
             params.append('-GroupByComment')
 
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def merge_config_with_file(self, cf_file_path: str, settings_path: str) -> None:
         """
@@ -647,7 +669,7 @@ class Designer:
             f'/MergeCfg', f'{full_cf_file_path}',
             f'-Settings', f'{full_path_settings_path}'
         ]
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
     def compare_config_with_file(self, cf_file_path: str, report_path: str) -> None:
         """
@@ -680,7 +702,7 @@ class Designer:
             '-ReportFile',
             f'{full_report_path}'
         ]
-        self.__execute_command(f'DESIGNER', params)
+        self.execute_command(f'DESIGNER', params)
 
 
 def convert_cf_to_xml(
