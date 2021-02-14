@@ -34,7 +34,7 @@ class TestPlatform(unittest.TestCase):
         ]
 
         with self.assertRaises(EnvironmentError) as error:
-            utils.get_platform_path(check_version)
+            utils.get_1c_exe_path(check_version)
         self.assertEqual(
             error.exception.args[0],
             f'Не обнаружена версия {check_version} 1с.',
@@ -56,14 +56,14 @@ class TestPlatform(unittest.TestCase):
         check_version = utils.PlatformVersion('8.2.14.1232')
         with mock.patch('os.getenv') as os_getenv:
             os_getenv.return_value = pref_path
-            platform_path = utils.get_platform_path(check_version)
+            platform_path = utils.get_1c_exe_path(check_version)
             self.assertEqual(
                 platform_path,
                 f'{pref_path}\\1cv8\\{check_version}\\bin\\1cv8.exe',
                 'Не прошла проверка не получение версии'
             )
 
-            platform_path = utils.get_platform_path(utils.PlatformVersion(''))
+            platform_path = utils.get_1c_exe_path(utils.PlatformVersion(''))
             self.assertEqual(
                 platform_path,
                 f'{pref_path}\\1cv8\\{max_version}\\bin\\1cv8.exe',

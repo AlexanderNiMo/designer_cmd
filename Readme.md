@@ -119,12 +119,45 @@
             
 - Запуск обработки в базе:
     
-    
         from designer_cmd import api   
         conn = api.Connection(user='User', password='Password', file_path='DB_Path')
         ent = api.Enterprise('8.3.12.1254', self.conn)
         ent.run_epf_erf(path_to_epf, 'params_to_c')
         
+- Работа с кластером через Rac:
+        
+        from designer_cmd import api
+
+        conn = api.RacConnection(admin, passwd, server, port)
+        r = api.Rac(v_8version, conn)
+        r.set_cluster_id(cluster_id)
+        
+    - Высокоуровневый api:
+            
+            r.disconnect_users(base_ref='base_name')
+    - Режим cluster:
+            
+            cluster_list = r.cluster.get_cluster_list()
+            
+    - Режим infobase:
+            
+            base_data = r.infobase.get_base_by_ref(base_name)
+            base_id = base_data.get('infobase')
+            r.infobase.get_base_list()
+            r.infobase.deny_sessions(permission_code='333')
+            r.infobase.deny_scheduled_jobs()
+    
+    - Режим sessions:
+            
+            session_list = r.sessions.get_session_list()
+            r.sessions.session_info(session_id)
+            r.sessions.terminate_session(session_id)
+            
+
+         
+         
+                    
+            
 #Планируемая фукциональность:
 
 - Работа в контексте linux

@@ -1,4 +1,6 @@
-from designer_cmd.api import Connection, Designer, RepositoryConnection, convert_cf_to_xml, Enterprise
+from designer_cmd.api import RepositoryConnection, Connection, Enterprise, Designer, Rac, RacConnection
+from designer_cmd.api.rac_executable import SessionMod, InfobaseMod, ClusterMod
+from typing import Optional, List, Dict
 import unittest
 import os.path as path
 import os
@@ -431,3 +433,158 @@ class TestDesigner(DataPrepearer):
 
         self.designer.dump_config_to_files(dir_xml_config_path)
         return dir_xml_config_path
+
+
+class ExecutorMock(Rac):
+
+    def __init__(self):
+        super(ExecutorMock, self).__init__('', None)
+        self.params = []
+        self.mode = ''
+        self.test_data = []
+
+    def execute_command(self, mode: str, command_params: list,
+                        credentials_required: bool = False) -> List[Dict[str, str]]:
+        self.params = command_params
+        self.mode = mode
+        return self.test_data
+
+
+class TestInfobaseMod(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mock = ExecutorMock()
+        self.mod = InfobaseMod(executor=self.mock)
+        self.cluster_id = 'ff'
+        self.mock.set_cluster_id(self.cluster_id)
+
+    def test_get_infobase_list(self):
+        self.mod.get_base_list()
+
+        self.assertEqual({'summary', 'list', f'--cluster={self.cluster_id}'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_get_base_by_ref(self):
+        data1 = {'name': '2'}
+        self.mock.test_data = [{'name': '1'}, data1, {'name': '3'}]
+        data = self.mod.get_base_by_ref('2')
+        self.assertEqual(data, data1, 'Получен неожиданные результат поиска базы')
+
+    def test_deny_sessions(self):
+        base_id = 'bb'
+        permission_code = '111'
+        self.mock.base_id = base_id
+        self.mod.deny_sessions(permission_code)
+        self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
+                          '--session-deny=on', f'--permission-code={permission_code}'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+        self.mod.deny_sessions()
+        self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
+                          '--session-deny=on'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_allow_sessions(self):
+        base_id = 'bb'
+        self.mock.base_id = base_id
+        self.mod.allow_sessions()
+        self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
+                          '--session-deny=off'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_deny_sheduled_jobs(self):
+        base_id = 'bb'
+        self.mock.base_id = base_id
+        self.mod.deny_scheduled_jobs()
+        self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
+                          '--scheduled-jobs-deny=on'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_allow_sheduled_jobs(self):
+        base_id = 'bb'
+        self.mock.base_id = base_id
+        self.mod.allow_scheduled_jobs()
+        self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
+                          '--scheduled-jobs-deny=off'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+
+class TestClusterMod(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mock = ExecutorMock()
+        self.mod = ClusterMod(executor=self.mock)
+        self.cluster_id = 'ff'
+        self.mock.set_cluster_id(self.cluster_id)
+
+    def test_get_cluster_list(self):
+        self.mod.get_cluster_list()
+
+        self.assertEqual({'list'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+        self.assertEqual('cluster', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_get_base_by_ref(self):
+        data1 = {'name': '2'}
+        self.mock.test_data = [data1, {'name': '1'}, {'name': '3'}]
+
+        data = self.mod.get_cluster_data()
+
+        self.assertEqual(data, data1, 'Получен неожиданные результат поиска кластера')
+
+        self.mod.get_cluster_data(self.cluster_id)
+
+        self.assertEqual({'info', f'--cluster={self.cluster_id}'},
+                         set(self.mock.params), 'Сформированная команда на соответствует ожидаемой.')
+        self.assertEqual('cluster', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+
+class TestSessionMod(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mock = ExecutorMock()
+        self.mod = SessionMod(executor=self.mock)
+
+        self.cluster_id = 'ff'
+        self.mock.set_cluster_id(self.cluster_id)
+
+        self.base_id = 'bb'
+        self.mock.base_id = self.base_id
+
+        self.session_id = 'ss'
+
+    def test_get_session_list(self):
+
+        self.mod.get_session_list(self.base_id)
+
+        self.assertEqual({'list', f'--cluster={self.cluster_id}', f'--infobase={self.base_id}'},
+                         set(self.mock.params), 'Сформированная команда на соответствует ожидаемой.')
+        self.assertEqual('session', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+        self.mod.get_session_list()
+
+        self.assertEqual({'list', f'--cluster={self.cluster_id}', f'--infobase={self.base_id}'},
+                         set(self.mock.params), 'Сформированная команда на соответствует ожидаемой.')
+        self.assertEqual('session', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_session_info(self):
+        self.mod.session_info(self.session_id)
+
+        self.assertEqual({'info', f'--cluster={self.cluster_id}', f'--session={self.session_id}'},
+                         set(self.mock.params), 'Сформированная команда на соответствует ожидаемой.')
+        self.assertEqual('session', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def terminate_session(self):
+        msg = 'Удалено админом'
+        self.mod.terminate_session(self.session_id, msg)
+
+        self.assertEqual({'terminate', f'--cluster={self.cluster_id}',
+                          f'--session={self.session_id}', f'--error-message={msg}'},
+                         set(self.mock.params), 'Сформированная команда на соответствует ожидаемой.')
+        self.assertEqual('session', self.mock.mode, 'Режим не соответствует ожидаемому')

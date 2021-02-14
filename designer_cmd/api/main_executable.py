@@ -1,18 +1,34 @@
-from designer_cmd.utils import (get_platform_path, execute_command, xml_conf_version_file_exists,
-                                PlatformVersion, clear_folder, windows_platform)
 import os
-import logging
 import tempfile
+import logging
 from typing import Optional, Callable
+from designer_cmd.utils import PlatformVersion, get_1c_exe_path, execute_command, xml_conf_version_file_exists, \
+    clear_folder
+
 
 logger = logging.getLogger(__name__)
 
 
-class RepositoryConnection:
+class WithCredential:
 
-    def __init__(self, repository_path: str, user: str = '', password: str = ''):
+    def __init__(self, user: str = '', password: str = ''):
         self.password = password
         self.user = user
+
+    def replace_credentials(self, str_with_cred: str) -> str:
+        text = str_with_cred
+        if self.password:
+            text = str_with_cred.replace(self.password, f'pass{"*" * len(self.password)}')
+        if self.user:
+            text = text.replace(self.user, f'user{"*" * len(self.user)}')
+        return text
+
+
+class RepositoryConnection(WithCredential):
+
+    def __init__(self, repository_path: str, user: str = '', password: str = ''):
+
+        super(RepositoryConnection, self).__init__(user, password)
 
         full_repo_path = repository_path
         if 'tcp' not in repository_path:
@@ -31,16 +47,11 @@ class RepositoryConnection:
 
         return params
 
-    def replace_credentials(self, str_with_cred: str) -> str:
-        text = str_with_cred.replace(self.password, f'pass{"*"*len(self.password)}')
-        text = text.replace(self.user, f'user{"*"*len(self.user)}')
-        return text
-
     def __repr__(self):
         return f'path: {self.repository_path} user: {self.user}'
 
 
-class Connection:
+class Connection(WithCredential):
     """
     Описывает соединение с базой
     """
@@ -55,8 +66,7 @@ class Connection:
         if file_path == '' and (server_path == '' or server_base_ref == '') and ib_name == '':
             raise AttributeError('Для соедеинения не определен путь к базе!')
 
-        self.user = user
-        self.password = password
+        super(Connection, self).__init__(user, password)
 
         self.ib_name = ib_name
 
@@ -106,11 +116,6 @@ class Connection:
         else:
             raise NotImplementedError('Создание базы в серверном варианте не реализованно.')
 
-    def replace_credentials(self, str_with_cred: str) -> str:
-        text = str_with_cred.replace(self.password, f'pass{"*"*len(self.password)}')
-        text = text.replace(self.user, f'user{"*"*len(self.user)}')
-        return text
-
     def __repr__(self):
         if self.file_path != '':
             connection_path = f'File: {self.file_path}'
@@ -139,7 +144,10 @@ class AbcExecutor:
         self.repo_connection = repo_connection
         self.platform_version: PlatformVersion = PlatformVersion(platform_version)
         self.connection = connection
-        self.platform_path = get_platform_path(self.platform_version)
+        self.executable_path = self.get_executable_path()
+
+    def get_executable_path(self) -> str:
+        return get_1c_exe_path(self.platform_version)
 
     def execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
         params = [mode]
@@ -154,9 +162,9 @@ class AbcExecutor:
         if self.repo_connection is not None:
             str_command = self.repo_connection.replace_credentials(str_command)
 
-        logger.debug(f'Выполняю команду {self.platform_path} {str_command}')
+        logger.debug(f'Выполняю команду {self.executable_path} {str_command}')
 
-        result = execute_command(self.platform_path, params, self.connection.timeout)
+        result = execute_command(self.executable_path, params, self.connection.timeout)
 
         if result[0] != 0:
             try:

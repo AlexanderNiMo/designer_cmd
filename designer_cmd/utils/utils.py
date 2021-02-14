@@ -77,7 +77,7 @@ def windows_platform() -> bool:
     return 'win' in sys.platform
 
 
-def get_platform_path(version: PlatformVersion) -> str:
+def get_1c_exe_path(version: PlatformVersion) -> str:
     """
     Вычисляет путь к исполняемому файлу платформы
 
@@ -86,15 +86,53 @@ def get_platform_path(version: PlatformVersion) -> str:
     """
 
     if windows_platform():
-        platform_path = __get_platform_path_windows(version)
+        platform_path = __get_1c_executable_path_windows(version, path.join('bin', '1cv8.exe'))
     else:
-        platform_path = __get_platform_path_linux(version)
+        platform_path = __get_1c_executable_path_linux(version, '')
 
     return platform_path
 
 
-def __get_version_path(dir_1c, version: PlatformVersion) -> str:
-    bin_path = 'bin\\1cv8.exe'
+def get_rac_path(version: PlatformVersion) -> str:
+    """
+    Вычисляет путь к исполняемому файлу rac
+
+    :param version: Версия платформы.
+    :return:
+    """
+
+    if windows_platform():
+        rac_path = __get_1c_executable_path_windows(version, path.join('bin', 'rac.exe'))
+    else:
+        rac_path = __get_1c_executable_path_linux(version, '')
+
+    return rac_path
+
+
+def __get_1c_executable_path_windows(version: PlatformVersion, bin_path: str) -> str:
+    version_path = __get_version_path(path.join(os.getenv('ProgramW6432'), '1cv8'), version, bin_path)
+
+    if version_path == '':
+        version_path = __get_version_path(path.join(os.getenv('ProgramFiles'), '1cv8'), version, bin_path)
+
+    if version_path == '':
+        if version == '':
+            logger.critical('Не обнаружена установленная 1с. Выполнение невозможно.')
+            raise EnvironmentError('Не обнаружена установленная 1с.')
+        else:
+            logger.critical(f'Не обнаружена установленная версия 1с номер версии:{version}. Выполнение невозможно.')
+            raise EnvironmentError(f'Не обнаружена версия {version} 1с.')
+
+    return version_path
+
+
+def __get_1c_executable_path_linux(version: PlatformVersion, bin_path: str) -> str:
+    platform_path = ''
+
+    return platform_path
+
+
+def __get_version_path(dir_1c, version: PlatformVersion, bin_path) -> str:
     exept_dir = ['common', 'conf']
 
     versions = [PlatformVersion(dir_name) for dir_name in os.listdir(dir_1c) if dir_name not in exept_dir]
@@ -109,29 +147,6 @@ def __get_version_path(dir_1c, version: PlatformVersion) -> str:
         return path.join(dir_1c, version.version, bin_path)
     else:
         return ''
-
-
-def __get_platform_path_windows(version: PlatformVersion) -> str:
-    version_path = __get_version_path(path.join(os.getenv('ProgramW6432'), '1cv8'), version)
-
-    if version_path == '':
-        version_path = __get_version_path(path.join(os.getenv('ProgramFiles'), '1cv8'), version)
-
-    if version_path == '':
-        if version == '':
-            logger.critical('Не обнаружена установленная 1с. Выполнение невозможно.')
-            raise EnvironmentError('Не обнаружена установленная 1с.')
-        else:
-            logger.critical(f'Не обнаружена установленная версия 1с номер версии:{version}. Выполнение невозможно.')
-            raise EnvironmentError(f'Не обнаружена версия {version} 1с.')
-
-    return version_path
-
-
-def __get_platform_path_linux(version: PlatformVersion) -> str:
-    platform_path = ''
-
-    return platform_path
 
 
 def execute_command(command: str, params: list, timeout: int = None) -> tuple:
