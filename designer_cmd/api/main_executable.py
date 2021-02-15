@@ -568,9 +568,15 @@ class Designer(AbcExecutor):
         self.execute_command(f'DESIGNER', params)
 
     @have_repo_connection
-    def update_conf_from_repo(self, version: Optional[int] = None):
+    def update_conf_from_repo(self, version: Optional[int] = None, force: bool = False):
         """
         Выполняет обновление конфигурации из хранилища /ConfigurationRepositoryUpdateCfg
+
+        :param version: номер версии для обновления по умолчнаию последняя версия
+        :param force: если при пакетном обновлении конфигурации из хранилища должны быть получены новые
+            объекты конфигурации или удалиться существующие, указание этого параметра свидетельствует о
+            подтверждении пользователем описанных выше операций. Если параметр не указан ‑ действия выполнены не будут.
+
         """
         logger.debug(
             f'Обновление конфигурации БД из хранилища {self.repo_connection}'
@@ -578,6 +584,9 @@ class Designer(AbcExecutor):
 
         params = self.repo_connection.get_connection_params()
         params.append(f'/ConfigurationRepositoryUpdateCfg')
+
+        if force:
+            params.append(f'--force')
 
         cfg_version = -1
         if version is not None:
