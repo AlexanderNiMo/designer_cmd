@@ -183,12 +183,10 @@ class InfobaseMod(ABCRacMod):
 
     def execute_command(self, command_params: list,
                         base_id_required: bool = True,
-                        cluster_id_required: bool = True,
                         base_cred_required: bool = False) -> List[Dict[str, str]]:
+        self.executor.add_cluster_id(command_params)
         if base_id_required:
             self.executor.add_base_id(command_params)
-        if cluster_id_required:
-            self.executor.add_cluster_id(command_params)
         if base_cred_required:
             command_params += self.executor.connection.get_base_credentials()
         return super(InfobaseMod, self).execute_command(command_params)
@@ -199,7 +197,7 @@ class InfobaseMod(ABCRacMod):
 
         params = ['summary', 'list']
 
-        return self.execute_command(params, base_id_required=False, cluster_id_required=False)
+        return self.execute_command(params, base_id_required=False)
 
     @required_cluster_id
     def get_base_by_ref(self, base_ref: str) -> Dict[str, str]:
