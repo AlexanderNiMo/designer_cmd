@@ -12,11 +12,15 @@ class RacConnection:
     def __init__(self, user: str = '',
                  password: str = '',
                  server: str = '',
-                 port: int = 1545):
+                 port: int = 1545,
+                 base_user: str = '',
+                 base_password: str = ''):
         self.server = server
         self.port = port
         self.user = user
         self.password = password
+        self.base_user = base_user
+        self.base_password = base_password
 
     def get_connection_string(self):
         return f'{self.server}:{self.port}'
@@ -24,10 +28,17 @@ class RacConnection:
     def get_credentials(self):
         cred = []
         if self.user:
-            cred.append(f'--infobase-user={self.user}')
+            cred.append(f'--cluster-user={self.user}')
         if self.password:
-            cred.append(f'--infobase-pwd={self.password}')
+            cred.append(f'--cluster-pwd={self.password}')
+        return cred
 
+    def get_base_credentials(self):
+        cred = []
+        if self.base_user:
+            cred.append(f'--infobase-user={self.user}')
+        if self.base_password:
+            cred.append(f'--infobase-pwd={self.password}')
         return cred
 
 
@@ -172,11 +183,14 @@ class InfobaseMod(ABCRacMod):
 
     def execute_command(self, command_params: list,
                         base_id_required: bool = True,
-                        cluster_id_required: bool = True) -> List[Dict[str, str]]:
+                        cluster_id_required: bool = True,
+                        base_cred_required: bool = False) -> List[Dict[str, str]]:
         if base_id_required:
             self.executor.add_base_id(command_params)
         if cluster_id_required:
             self.executor.add_cluster_id(command_params)
+        if base_cred_required:
+            command_params += self.executor.connection.get_base_credentials()
         return super(InfobaseMod, self).execute_command(command_params)
 
     @required_cluster_id
@@ -185,7 +199,7 @@ class InfobaseMod(ABCRacMod):
 
         params = ['summary', 'list']
 
-        return self.execute_command(params, base_id_required=False)
+        return self.execute_command(params, base_id_required=False, cluster_id_required=False)
 
     @required_cluster_id
     def get_base_by_ref(self, base_ref: str) -> Dict[str, str]:
@@ -206,7 +220,7 @@ class InfobaseMod(ABCRacMod):
         params = ['update', '--sessions-deny=on']
         if permission_code:
             params.append(f'--permission-code={permission_code}')
-        self.execute_command(params)
+        self.execute_command(params, base_cred_required=True)
 
     @required_cluster_id
     @required_base_id
@@ -214,7 +228,7 @@ class InfobaseMod(ABCRacMod):
         logger.debug(f'Разрешаю соединение с базой {self.executor.base_id} по соединению {self.executor.connection}')
 
         params = ['update', '--sessions-deny=off']
-        self.execute_command(params)
+        self.execute_command(params, base_cred_required=True)
 
     @required_cluster_id
     @required_base_id
@@ -223,7 +237,7 @@ class InfobaseMod(ABCRacMod):
                      f'по соединению {self.executor.connection}')
 
         params = ['update', '--scheduled-jobs-deny=on']
-        self.execute_command(params)
+        self.execute_command(params, base_cred_required=True)
 
     @required_cluster_id
     @required_base_id
@@ -232,7 +246,7 @@ class InfobaseMod(ABCRacMod):
                      f'по соединению {self.executor.connection}')
 
         params = ['update', '--scheduled-jobs-deny=off']
-        self.execute_command(params)
+        self.execute_command(params, base_cred_required=True)
 
 
 class ClusterMod(ABCRacMod):
