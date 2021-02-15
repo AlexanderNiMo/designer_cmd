@@ -133,9 +133,7 @@ def __get_1c_executable_path_linux(version: PlatformVersion, bin_path: str) -> s
 
 
 def __get_version_path(dir_1c, version: PlatformVersion, bin_path) -> str:
-    exept_dir = ['common', 'conf']
-
-    versions = [PlatformVersion(dir_name) for dir_name in os.listdir(dir_1c) if dir_name not in exept_dir]
+    versions = [PlatformVersion(dir_name) for dir_name in os.listdir(dir_1c) if __is_platform_dir(dir_name)]
 
     if len(versions) == 0:
         return ''
@@ -147,6 +145,25 @@ def __get_version_path(dir_1c, version: PlatformVersion, bin_path) -> str:
         return path.join(dir_1c, version.version, bin_path)
     else:
         return ''
+
+
+def __is_platform_dir(dir_name: str) -> bool:
+    exept_dir = ['common', 'conf']
+    if dir_name in exept_dir:
+        return False
+
+    octs_first = dir_name.split('.')
+
+    if len(octs_first) > 4:
+        return False
+
+    for oct in octs_first:
+        if not oct.isnumeric():
+            return False
+        if len(oct) > 4:
+            return False
+
+    return True
 
 
 def execute_command(command: str, params: list, timeout: int = None) -> tuple:
