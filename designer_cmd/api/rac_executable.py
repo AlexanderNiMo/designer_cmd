@@ -36,9 +36,9 @@ class RacConnection:
     def get_base_credentials(self):
         cred = []
         if self.base_user:
-            cred.append(f'--infobase-user={self.user}')
+            cred.append(f'--infobase-user={self.base_user}')
         if self.base_password:
-            cred.append(f'--infobase-pwd={self.password}')
+            cred.append(f'--infobase-pwd={self.base_password}')
         return cred
 
 
