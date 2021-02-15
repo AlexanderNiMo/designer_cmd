@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class RacConnection:
 
-    def __init__(self, user: str= '',
+    def __init__(self, user: str = '',
                  password: str = '',
                  server: str = '',
                  port: int = 1545):
@@ -44,17 +44,18 @@ def parse_result(result_str: str) -> List[Dict[str, str]]:
     cur_result = {}
     for el in data:
         if el == '':
-            result.append(cur_result)
+            if cur_result:
+                result.append(cur_result)
             cur_result = {}
             continue
 
         key_val = el.split(':')
-        if len(key_val) != 2:
+        if len(key_val) < 2:
             raise ValueError('Ошибка разбора результата ответа')
         key = key_val[0].strip()
-        val = key_val[1].strip()
+        val = ':'.join(key_val[1:]).strip()
         cur_result[key] = val
-    if len(cur_result) != 0:
+    if cur_result:
         result.append(cur_result)
     return result
 
@@ -144,7 +145,6 @@ class Rac:
             raise SyntaxError(f'Не удалось выполнить команду! подробно: {result[1]}')
         return result_data
 
-    @required_cluster_id
     def disconnect_users(self, base_ref: str):
         base_data = self.infobase.get_base_by_ref(base_ref)
         base_id = base_data.get('infobase')
@@ -219,7 +219,8 @@ class InfobaseMod(ABCRacMod):
     @required_cluster_id
     @required_base_id
     def deny_scheduled_jobs(self):
-        logger.debug(f'Запрещаю работу регл. задач в базе {self.executor.base_id} по соединению {self.executor.connection}')
+        logger.debug(f'Запрещаю работу регл. задач в базе {self.executor.base_id} '
+                     f'по соединению {self.executor.connection}')
 
         params = ['update', '--scheduled-jobs-deny=on']
         self.execute_command(params)
@@ -227,7 +228,8 @@ class InfobaseMod(ABCRacMod):
     @required_cluster_id
     @required_base_id
     def allow_scheduled_jobs(self):
-        logger.debug(f'Разрешаю работу регл. задач в базе {self.executor.base_id} по соединению {self.executor.connection}')
+        logger.debug(f'Разрешаю работу регл. задач в базе {self.executor.base_id} '
+                     f'по соединению {self.executor.connection}')
 
         params = ['update', '--scheduled-jobs-deny=off']
         self.execute_command(params)
@@ -303,5 +305,3 @@ class SessionMod(ABCRacMod):
             params.append(f'--error-message={msg}')
 
         return self.execute_command(params)
-
-
