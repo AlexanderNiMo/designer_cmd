@@ -483,7 +483,7 @@ class TestInfobaseMod(unittest.TestCase):
 
         self.mod.deny_sessions()
         self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
-                          '--session-deny=on'}, set(self.mock.params),
+                          '--sessions-deny=on'}, set(self.mock.params),
                          'Сформированная команда не соответствует ожидаемой')
         self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
 
@@ -492,7 +492,7 @@ class TestInfobaseMod(unittest.TestCase):
         self.mock.base_id = base_id
         self.mod.allow_sessions()
         self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
-                          '--session-deny=off'}, set(self.mock.params),
+                          '--sessions-deny=off'}, set(self.mock.params),
                          'Сформированная команда не соответствует ожидаемой')
         self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
 

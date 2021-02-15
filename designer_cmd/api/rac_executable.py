@@ -203,7 +203,7 @@ class InfobaseMod(ABCRacMod):
     def deny_sessions(self, permission_code: Optional[str] = None):
         logger.debug(f'Запрещаю соединение с базой {self.executor.base_id} по соединению {self.executor.connection}')
 
-        params = ['update', '--session-deny=on']
+        params = ['update', '--sessions-deny=on']
         if permission_code:
             params.append(f'--permission-code={permission_code}')
         self.execute_command(params)
@@ -213,7 +213,7 @@ class InfobaseMod(ABCRacMod):
     def allow_sessions(self):
         logger.debug(f'Разрешаю соединение с базой {self.executor.base_id} по соединению {self.executor.connection}')
 
-        params = ['update', '--session-deny=off']
+        params = ['update', '--sessions-deny=off']
         self.execute_command(params)
 
     @required_cluster_id
