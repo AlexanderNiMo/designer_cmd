@@ -7,6 +7,8 @@ import os
 from designer_cmd.utils.utils import clear_folder, kill_process
 from json import dump
 import socket
+import time
+
 
 class TestConnection(unittest.TestCase):
 
@@ -112,9 +114,9 @@ class TestEnterprise(DataPrepearer):
         with open(json_file, r'w') as f:
             dump({'text': text_data, 'file': file_path}, f)
 
-        self.enterprise.run_epf_erf(
-            self.epf_path,
-            json_file
+        self.enterprise.run_app(
+            ep_x_path=self.epf_path,
+            c_string=json_file
         )
         self.assertTrue(path.exists(file_path), 'Файл не создан!')
         with open(file_path, r'r', encoding='utf-8-sig') as f:
@@ -123,18 +125,17 @@ class TestEnterprise(DataPrepearer):
 
     def test_run_test_client(self):
         port = 1538
-        self.enterprise.run_test_client(port)
+        self.enterprise.run_app(mode=self.enterprise.RunMode.CLIENT, port=port, wait=False)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             self.assertTrue(s.connect_ex(('localhost', port)) == 0, 'Клиент запущен на неожиданном порту')
 
-    def test_run_test_manager_client(self):
-        self.enterprise.run_test_manager()
-
-    def test_kill_clients(self):
-        self.enterprise.run_test_manager()
+    def test_run_test_manager(self):
+        self.enterprise.run_app(mode=self.enterprise.RunMode.MANAGER, wait=False)
 
     def tearDown(self):
         self.enterprise.kill_all_clients()
+        time.sleep(0.5)
+        super(TestEnterprise, self).tearDown()
 
 
 class TestDesigner(DataPrepearer):

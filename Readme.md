@@ -124,18 +124,21 @@
     ent = api.Enterprise('8.3.12.1254', self.conn)
            
     - Запуск обработки в базе:
-                    
-            ent.run_epf_erf(path_to_epf, 'params_to_c')
-    
+             
+            ent.run_app(
+                ep_x_path=path_to_epf,
+                c_string='params_to_c'
+            ) 
+                
     - Запуск в режиме ТестМенеджера
         
-            ent.run_test_manager() # Без ожидания 
-            ent.run_test_manager(wait=True) # Ожидать завершения
+            ent.run_app(mode=ent.RunMode.MANAGER, wait=False) # Без ожидания 
+            ent.run_app(mode=ent.RunMode.MANAGER) # Ожидать завершения
         
     - Запуск в режиме Тестклиента (При запуске производиться проверка доступности порта)
     
-            ent.run_test_client(port=1538) # Без ожидания (порт по умолчанию 1538) 
-            ent.run_test_client(wait=True) # Ожидать завершения
+            ent.run_app(mode=ent.RunMode.CLIENT, port=1538, wait=False) # Без ожидания (порт по умолчанию 1538) 
+            ent.run_app(wait=True) # Ожидать завершения
     
     - Запуск 
     
@@ -144,9 +147,7 @@
     - Завершение всех запущенных клиентов по текущему соединению
     
             ent.kill_all_clients()  
-    
-             
- 
+     
         
 - Работа с кластером через Rac:
         

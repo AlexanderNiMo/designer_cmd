@@ -1,6 +1,7 @@
 import os
 import tempfile
 import logging
+import enum
 from typing import Optional, Callable
 from designer_cmd.utils import PlatformVersion, get_1c_exe_path, execute_command, xml_conf_version_file_exists, \
     clear_folder, port_in_use, get_1c_processes, kill_process
@@ -195,56 +196,40 @@ class AbcExecutor:
 
 class Enterprise(AbcExecutor):
 
-    def run_app(self, wait: bool = True):
+    class RunMode(enum.Enum):
+        NORMAL = ''
+        MANAGER = '/TestManager'
+        CLIENT = '/TestClient'
+
+    def run_app(self, mode: Optional['RunMode'] = None, ep_x_path: Optional[str] = None,
+                c_string: Optional[str] = None, port: Optional[int]=None, wait: bool = True):
         """
         Запускает экземпляр 1с предприятия
+        :param mode: режим запуска (Обычный, ТестКлиент, ТестМенеджер)
+        :param ep_x_path: Путь к файлу epf/epr, который необходимо запустить.
+        :param c_string: Строка, которая будет переданна в /C.
+        :param port: Порт на котором будет запущет тест менеджер
         :param wait: Ожидать завершения.
         :return:
         """
-        self.execute_command('ENTERPRISE ', [], wait=wait)
+        params = []
+        if ep_x_path:
+            logger.debug(f'Запускаю обработку {ep_x_path} в базе: {self.connection}')
+            params = [f'/Execute', ep_x_path]
+            if c_string:
+                params.append('/C')
+                params.append(c_string)
+        else:
+            logger.debug(f'Запускаю предприятние в режиме {mode} в базе: {self.connection}')
 
-    def run_epf_erf(self, ep_x_path: str, c_string: str = None, wait: bool = True):
-        """
-        Запускает обработку\отчет в базе
-        (соответствует команде /Execute )
-        :param ep_x_path: Путь к файлу cf, который необходимо сравнить с конфигурацией.
-        :param: c_string: Строка, которая будет переданна в /C.
-        :return:
-        """
-        logger.debug(f'Запускаю обработку {ep_x_path} в базе: {self.connection}')
-        params = [f'/Execute', ep_x_path]
-        if c_string:
-            params.append('/C')
-            params.append(c_string)
+        if mode:
+            params.append(mode.value)
 
-        self.execute_command('ENTERPRISE ', params, wait=wait)
+        if port:
+            if port_in_use(port):
+                raise SyntaxError('Порт уже занят')
+            params.append(f'Tport {port}')
 
-    def run_test_manager(self, wait: bool = False):
-        """
-        Запускает предпреятие в режиме ТестМенеджера
-        (соответствует команде /TestManager )
-        :param wait: Флаг ожидания завершения работы процесса
-        :return:
-        """
-        logger.debug(f'Запускаю базу: {self.connection} в режиме тестменеджера')
-        params = ['/TestManager']
-
-        self.execute_command('ENTERPRISE ', params, wait=wait)
-
-    def run_test_client(self, port: int = 1538, wait: bool = False):
-        """
-        Запускает предпреятие в режиме Тестклиента
-        (соответствует команде /TestClient )
-        :param wait: Флаг ожидания завершения работы процесса, по умолчанию не ждет
-        :param port: Порт для запуска (Tport), по умолчанию 1538
-        :return:
-        """
-        logger.debug(f'Запускаю базу: {self.connection} в режиме тестклиента на порту {port}')
-
-        if port_in_use(port):
-            raise SyntaxError('Порт уже занят')
-
-        params = ['/TestClient', f'Tport {port}']
         self.execute_command('ENTERPRISE ', params, wait=wait)
 
     def kill_all_clients(self):
