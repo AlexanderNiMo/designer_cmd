@@ -116,13 +116,37 @@
     - Привязка конфигурации к хранилищу
             
             designer.unbind_cfg_from_repo()
-            
-- Запуск обработки в базе:
+
+- Работа в режиме Enterprise
+       
+    from designer_cmd import api   
+    conn = api.Connection(user='User', password='Password', file_path='DB_Path')
+    ent = api.Enterprise('8.3.12.1254', self.conn)
+           
+    - Запуск обработки в базе:
+                    
+            ent.run_epf_erf(path_to_epf, 'params_to_c')
     
-        from designer_cmd import api   
-        conn = api.Connection(user='User', password='Password', file_path='DB_Path')
-        ent = api.Enterprise('8.3.12.1254', self.conn)
-        ent.run_epf_erf(path_to_epf, 'params_to_c')
+    - Запуск в режиме ТестМенеджера
+        
+            ent.run_test_manager() # Без ожидания 
+            ent.run_test_manager(wait=True) # Ожидать завершения
+        
+    - Запуск в режиме Тестклиента (При запуске производиться проверка доступности порта)
+    
+            ent.run_test_client(port=1538) # Без ожидания (порт по умолчанию 1538) 
+            ent.run_test_client(wait=True) # Ожидать завершения
+    
+    - Запуск 
+    
+            ent.run_app() # Возможен запуск без ожидания.
+     
+    - Завершение всех запущенных клиентов по текущему соединению
+    
+            ent.kill_all_clients()  
+    
+             
+ 
         
 - Работа с кластером через Rac:
         

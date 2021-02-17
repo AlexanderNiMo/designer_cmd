@@ -4,9 +4,9 @@ from typing import Optional, List, Dict
 import unittest
 import os.path as path
 import os
-from designer_cmd.utils.utils import clear_folder
+from designer_cmd.utils.utils import clear_folder, kill_process
 from json import dump
-
+import socket
 
 class TestConnection(unittest.TestCase):
 
@@ -120,6 +120,21 @@ class TestEnterprise(DataPrepearer):
         with open(file_path, r'r', encoding='utf-8-sig') as f:
             lines = f.readlines()
             self.assertEqual(text_data, lines[0], 'Текст не соответствует ожиданию.')
+
+    def test_run_test_client(self):
+        port = 1538
+        self.enterprise.run_test_client(port)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            self.assertTrue(s.connect_ex(('localhost', port)) == 0, 'Клиент запущен на неожиданном порту')
+
+    def test_run_test_manager_client(self):
+        self.enterprise.run_test_manager()
+
+    def test_kill_clients(self):
+        self.enterprise.run_test_manager()
+
+    def tearDown(self):
+        self.enterprise.kill_all_clients()
 
 
 class TestDesigner(DataPrepearer):
@@ -438,7 +453,8 @@ class TestDesigner(DataPrepearer):
 class ExecutorMock(Rac):
 
     def __init__(self):
-        super(ExecutorMock, self).__init__('', None)
+        conn = RacConnection()
+        super(ExecutorMock, self).__init__('', conn)
         self.params = []
         self.mode = ''
         self.test_data = []
@@ -477,7 +493,7 @@ class TestInfobaseMod(unittest.TestCase):
         self.mock.base_id = base_id
         self.mod.deny_sessions(permission_code)
         self.assertEqual({'update', f'--cluster={self.cluster_id}', f'--infobase={base_id}',
-                          '--session-deny=on', f'--permission-code={permission_code}'}, set(self.mock.params),
+                          '--sessions-deny=on', f'--permission-code={permission_code}'}, set(self.mock.params),
                          'Сформированная команда не соответствует ожидаемой')
         self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
 

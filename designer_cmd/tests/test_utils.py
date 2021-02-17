@@ -77,9 +77,9 @@ class TestPlatform(unittest.TestCase):
         version_2 = utils.PlatformVersion('8.3.14.1422')
         versuon_3 = utils.PlatformVersion('8.3.14.1522')
 
-        self.assertGreater(vresion_max, versuon_1, 'Проверка на сравление с максимальной версией не прошла.')
-        self.assertGreater(vresion_max, version_2, 'Проверка на сравление с максимальной версией не прошла.')
-        self.assertGreater(versuon_1, version_2, 'Проверка на сравление версий не прошла.')
+        self.assertGreater(vresion_max, versuon_1, 'Проверка на сравнение с максимальной версией не прошла.')
+        self.assertGreater(vresion_max, version_2, 'Проверка на сравнение с максимальной версией не прошла.')
+        self.assertGreater(versuon_1, version_2, 'Проверка на сравнение версий не прошла.')
         self.assertEqual(versuon_1, versuon_3, 'Проверка на равенство не прошла')
         self.assertNotEqual(versuon_1, version_2, 'Провенка на неравенство не прошла.')
 
@@ -104,6 +104,20 @@ class TestUtils(unittest.TestCase):
     def test_timout_exception(self):
         result = utils.execute_command('cmd.exe', ['/c', 'pause 10'], 1)
         self.assertTrue(result[0] == 1, 'Ошибка по таймауту не произошла')
+
+    def test_port_in_use(self):
+        import socket
+        port = 9456
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('localhost', port))
+            s.listen()
+            self.assertTrue(utils.port_in_use(port), 'Не верно определена доступность порта (занятый порт)')
+        self.assertFalse(utils.port_in_use(port), 'Не верно определена доступность порта (не занятый порт)')
+
+    def test_parse_wmic_data(self):
+        with open('test_data/wmic_data', r'rb') as f:
+            data = f.read()
+            utils.parse_wmic_data(data.decode('cp866'))
 
     def tearDown(self):
         pass

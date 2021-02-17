@@ -6,6 +6,9 @@ import subprocess
 from functools import total_ordering
 import shutil
 from ctypes import windll
+from typing import List
+import signal
+import dataclasses
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +74,30 @@ class PlatformVersion:
         if not self._is_valid_operand(other):
             return NotImplemented
         return self.version_weight < other.version_weight
+
+
+@dataclasses.dataclass
+class Process:
+    cmd: str
+    pid: int
+
+    def kill(self):
+        kill_process(self.pid)
+
+
+def kill_process(pid: int):
+    if windows_platform():
+        __kill_process_windows(pid)
+    else:
+        __kill_process_linux(pid)
+
+
+def __kill_process_windows(pid: int):
+    os.kill(pid, signal.SIGBREAK)
+
+
+def __kill_process_linux(pid: int):
+    raise NotImplementedError
 
 
 def windows_platform() -> bool:
@@ -166,7 +193,7 @@ def __is_platform_dir(dir_name: str) -> bool:
     return True
 
 
-def execute_command(command: str, params: list, timeout: int = None) -> tuple:
+def execute_command(command: str, params: list, timeout: int = None, wait: bool = True) -> tuple:
     """
     Выполняет команду в системе.
 
@@ -176,19 +203,26 @@ def execute_command(command: str, params: list, timeout: int = None) -> tuple:
     :return:
     """
     if windows_platform():
-        result = __execute_windows_command(command, params, timeout)
+        result = __execute_windows_command(command, params, timeout, wait)
     else:
-        result = __execute_linux_command(command, params, timeout)
+        result = __execute_linux_command(command, params, timeout, wait)
     return result
 
 
-def __execute_windows_command(command: str, params: list, timeout: int) -> tuple:
-    """
-    Выполняет команду системы в windows
+def __execute_windows_command(command: str, params: list, timeout: int, wait: bool = True) -> tuple:
+    if wait:
+        return __execute_windows_command_wait(command, params, timeout)
+    else:
+        return __execute_windows_command_no_wait(command, params)
 
-    :param command:
-    :return:
+
+def __execute_windows_command_wait(command: str, params: list, timeout: int) -> tuple:
     """
+        Выполняет команду системы в windows с ожиданием выполнения
+
+        :param command:
+        :return:
+        """
     prev_codepage = windll.kernel32.GetConsoleOutputCP()
     windll.kernel32.SetConsoleOutputCP(65001)
     try:
@@ -214,6 +248,29 @@ def __execute_windows_command(command: str, params: list, timeout: int) -> tuple
         windll.kernel32.SetConsoleOutputCP(prev_codepage)
 
 
+def __execute_windows_command_no_wait(command: str, params: list) -> tuple:
+    """
+        Выполняет команду системы в windows без ожидания выполнения
+
+        :param command:
+        :return:
+        """
+    prev_codepage = windll.kernel32.GetConsoleOutputCP()
+    windll.kernel32.SetConsoleOutputCP(65001)
+
+    try:
+        process = subprocess.Popen(
+            args=[command] + params,
+            encoding=encoding(),
+            close_fds=True
+        )
+        return 0, ''
+    except subprocess.CalledProcessError as e:
+        return 1, f'Ошибка выполнения команды {e}'
+    finally:
+        windll.kernel32.SetConsoleOutputCP(prev_codepage)
+
+
 def encoding() -> str:
     """
     Определяет кодировку в контексте системы.
@@ -229,7 +286,7 @@ def encoding() -> str:
                 sys.getfilesystemencoding() or "utf-8")
 
 
-def __execute_linux_command(command: str, params: list, timeout: int) -> str:
+def __execute_linux_command(command: str, params: list, timeout: int, wait: bool = True) -> str:
     """
     Выполняет команду системы в linux
 
@@ -257,3 +314,50 @@ def clear_folder(dir_path):
                 shutil.rmtree(file_path)
             else:
                 os.remove(file_path)
+
+
+def port_in_use(port):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+
+def get_1c_processes() -> List[Process]:
+    result = None
+    if windows_platform():
+        result = _get_1c_processes_windows()
+    else:
+        result = _get_1c_processes_linux()
+    return result
+
+
+def _get_1c_processes_windows() -> List[Process]:
+    result = subprocess.run(
+        [
+            'wmic', 'process', 'where',
+            "description='1cv8.exe' OR description='1cv8c.exe'",
+            'list', 'full', '/format'
+        ],
+        stdout=subprocess.PIPE
+    )
+    return parse_wmic_data(result.stdout.decode('cp866'))
+
+
+def parse_wmic_data(data: str) -> List[Process]:
+    lines = data.split('\r\r\n')
+    procs = []
+    proc = {}
+    for line in lines:
+        if line == '':
+            if proc:
+                p = Process(cmd=proc.get('CommandLine'), pid=int(proc.get('ProcessId')))
+                procs.append(p)
+                proc = {}
+            continue
+        line_data = line.split('=')
+        proc[line_data[0]] = line_data[1]
+    return procs
+
+
+def _get_1c_processes_linux() -> List[Process]:
+    raise NotImplementedError

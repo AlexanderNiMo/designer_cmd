@@ -3,8 +3,7 @@ import tempfile
 import logging
 from typing import Optional, Callable
 from designer_cmd.utils import PlatformVersion, get_1c_exe_path, execute_command, xml_conf_version_file_exists, \
-    clear_folder
-
+    clear_folder, port_in_use, get_1c_processes, kill_process
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +148,8 @@ class AbcExecutor:
     def get_executable_path(self) -> str:
         return get_1c_exe_path(self.platform_version)
 
-    def execute_command(self, mode: str, command_params: list, connection_params_required: bool = True):
+    def execute_command(self, mode: str, command_params: list,
+                        connection_params_required: bool = True, wait: bool = True):
         params = [mode]
         if connection_params_required:
             params += self.connection.get_connection_params()
@@ -164,7 +164,7 @@ class AbcExecutor:
 
         logger.debug(f'Выполняю команду {self.executable_path} {str_command}')
 
-        result = execute_command(self.executable_path, params, self.connection.timeout)
+        result = execute_command(self.executable_path, params, self.connection.timeout, wait)
 
         if result[0] != 0:
             try:
@@ -195,7 +195,15 @@ class AbcExecutor:
 
 class Enterprise(AbcExecutor):
 
-    def run_epf_erf(self, ep_x_path: str, c_string: str = None):
+    def run_app(self, wait: bool = True):
+        """
+        Запускает экземпляр 1с предприятия
+        :param wait: Ожидать завершения.
+        :return:
+        """
+        self.execute_command('ENTERPRISE ', [], wait=wait)
+
+    def run_epf_erf(self, ep_x_path: str, c_string: str = None, wait: bool = True):
         """
         Запускает обработку\отчет в базе
         (соответствует команде /Execute )
@@ -209,7 +217,46 @@ class Enterprise(AbcExecutor):
             params.append('/C')
             params.append(c_string)
 
-        self.execute_command('ENTERPRISE ', params)
+        self.execute_command('ENTERPRISE ', params, wait=wait)
+
+    def run_test_manager(self, wait: bool = False):
+        """
+        Запускает предпреятие в режиме ТестМенеджера
+        (соответствует команде /TestManager )
+        :param wait: Флаг ожидания завершения работы процесса
+        :return:
+        """
+        logger.debug(f'Запускаю базу: {self.connection} в режиме тестменеджера')
+        params = ['/TestManager']
+
+        self.execute_command('ENTERPRISE ', params, wait=wait)
+
+    def run_test_client(self, port: int = 1538, wait: bool = False):
+        """
+        Запускает предпреятие в режиме Тестклиента
+        (соответствует команде /TestClient )
+        :param wait: Флаг ожидания завершения работы процесса, по умолчанию не ждет
+        :param port: Порт для запуска (Tport), по умолчанию 1538
+        :return:
+        """
+        logger.debug(f'Запускаю базу: {self.connection} в режиме тестклиента на порту {port}')
+
+        if port_in_use(port):
+            raise SyntaxError('Порт уже занят')
+
+        params = ['/TestClient', f'Tport {port}']
+        self.execute_command('ENTERPRISE ', params, wait=wait)
+
+    def kill_all_clients(self):
+        """
+        Завершает все запущенные под текущим соединением версии 1с
+        :return:
+        """
+        logger.debug(f'Останавливаю все экземпляры 1с, запущенные, на этом сервере по соединению {self.connection}')
+        procs_1c = get_1c_processes()
+        con_s = ' '.join(self.connection.get_connection_params())
+        for proc in filter(lambda x: con_s in x.cmd and 'ENTERPRISE' in x.cmd, procs_1c):
+            proc.kill()
 
 
 class Designer(AbcExecutor):
