@@ -123,7 +123,7 @@ class Connection(WithCredential):
             connection_path = f'IBName: {self.ib_name}'
         else:
             connection_path = f'Server: {self.server_path} base_ref: {self.server_base_ref}'
-        connection_path += f'user: {self.user}' if self.user != '' else ''
+        connection_path += f' user: {self.user}' if self.user != '' else ''
         return connection_path
 
 

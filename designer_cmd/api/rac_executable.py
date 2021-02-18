@@ -41,6 +41,15 @@ class RacConnection:
             cred.append(f'--infobase-pwd={self.base_password}')
         return cred
 
+    def __str__(self):
+        attrs = [f'server: {self.server}', f'port: {self.port}']
+        if self.user:
+            attrs.append(f'cluster_user: {self.user}')
+        if self.base_user:
+            attrs.append(f'base_user: {self.base_user}')
+        attr_str = ' '.join(attrs)
+        return f'<RacConnection> {attr_str}'
+
 
 def parse_result(result_str: str) -> List[Dict[str, str]]:
     result = []
