@@ -228,7 +228,7 @@ class Enterprise(AbcExecutor):
         if port:
             if port_in_use(port):
                 raise SyntaxError('Порт уже занят')
-            params.append(f'Tport {port}')
+            params.append(f'-Tport {port}')
 
         self.execute_command('ENTERPRISE ', params, wait=wait)
 

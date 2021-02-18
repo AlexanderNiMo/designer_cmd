@@ -124,7 +124,7 @@ class TestEnterprise(DataPrepearer):
             self.assertEqual(text_data, lines[0], 'Текст не соответствует ожиданию.')
 
     def test_run_test_client(self):
-        port = 1538
+        port = 1578
         self.enterprise.run_app(mode=self.enterprise.RunMode.CLIENT, port=port, wait=False)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             self.assertTrue(s.connect_ex(('localhost', port)) == 0, 'Клиент запущен на неожиданном порту')

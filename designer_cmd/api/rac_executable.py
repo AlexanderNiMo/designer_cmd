@@ -193,7 +193,7 @@ class InfobaseMod(ABCRacMod):
 
     @required_cluster_id
     def get_base_list(self):
-        logger.debug(f'Получаю список кластеров по соединению {self.executor.connection}')
+        logger.debug(f'Получаю список баз по соединению {self.executor.connection}')
 
         params = ['summary', 'list']
 
@@ -291,6 +291,8 @@ class SessionMod(ABCRacMod):
 
     @required_cluster_id
     def get_session_list(self, base_id: Optional[str] = None):
+        if not base_id:
+            base_id = self.executor.base_id
         logger.debug(f'Получаю список активных сессий в базе {base_id}')
 
         params = ['list']
