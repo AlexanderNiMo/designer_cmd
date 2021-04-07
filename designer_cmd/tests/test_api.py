@@ -1,10 +1,10 @@
 from designer_cmd.api import RepositoryConnection, Connection, Enterprise, Designer, Rac, RacConnection
-from designer_cmd.api.rac_executable import SessionMod, InfobaseMod, ClusterMod
-from typing import Optional, List, Dict
+from designer_cmd.api.rac_executable import SessionMod, InfobaseMod, ClusterMod, SqlServerConnection, SqlServerType
+from typing import List, Dict
 import unittest
 import os.path as path
 import os
-from designer_cmd.utils.utils import clear_folder, kill_process
+from designer_cmd.utils.utils import clear_folder
 from json import dump
 import socket
 import time
@@ -530,6 +530,49 @@ class TestInfobaseMod(unittest.TestCase):
                           '--scheduled-jobs-deny=off'}, set(self.mock.params),
                          'Сформированная команда не соответствует ожидаемой')
         self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+    def test_drop_database(self):
+        base_id = 'bb'
+        self.mock.base_id = base_id
+        self.mod.drop_base()
+
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+        self.assertEqual({'drop', f'--cluster={self.cluster_id}', f'--infobase={base_id}'}, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+
+    def test_create_data_base(self):
+        db_name = 'bb'
+        host = 'host'
+        user = 'user'
+        password = 'pwd'
+        server_type = SqlServerType.MSSQL
+        base_id = '1'
+
+        self.mock.test_data = [{'infobase': base_id}]
+
+        sql_conn = SqlServerConnection(host=host, user=user, password=password, type=server_type)
+        new_base_id = self.mod.create_base(db_name, sql_conn)
+
+        self.assertEqual('infobase', self.mock.mode, 'Режим не соответствует ожидаемому')
+
+        self.assertEqual({
+            'create',
+            '--cluster=ff',
+            '--create-database',
+            f'--name={db_name}',
+            '--license-distribution=allow',
+            f'--dbms={server_type}',
+            '--locale=ru_RU',
+            '--date-offset=2000',
+            f'--db-server={host}:5432',
+            f'--db-name={db_name}',
+            f'--db-user={user}',
+            f'--db-pwd={password}'
+        }, set(self.mock.params),
+                         'Сформированная команда не соответствует ожидаемой')
+
+        self.assertEqual(new_base_id, base_id, 'Вернувшийся результат не равен ожидаемому!')
 
 
 class TestClusterMod(unittest.TestCase):

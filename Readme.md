@@ -155,11 +155,13 @@
 
         conn = api.RacConnection(admin, passwd, server, port)
         r = api.Rac(v_8version, conn)
-        r.set_cluster_id(cluster_id)
+        # r.set_cluster_id(cluster_id) # Если есть несколько кластеров под управлением ras 
+        r.set_cluster_id() # Установить id первого кластера в списке r.cluster.get_cluster_list()
         
     - Высокоуровневый api:
             
             r.disconnect_users(base_ref='base_name')
+            
     - Режим cluster:
             
             cluster_list = r.cluster.get_cluster_list()
@@ -167,10 +169,26 @@
     - Режим infobase:
             
             base_data = r.infobase.get_base_by_ref(base_name)
-            base_id = base_data.get('infobase')
+            r.base_id = base_data.get('infobase')
+            
             r.infobase.get_base_list()
             r.infobase.deny_sessions(permission_code='333')
             r.infobase.deny_scheduled_jobs()
+      
+      - Удаление базы:
+            
+            base_data = r.infobase.get_base_by_ref(base_name)
+            r.base_id = base_data.get('infobase')
+            
+            r.infobase.drop_base()
+      
+      - Созданеие базы
+            
+            server_type = api.SqlServerType.MSSQL
+            sql_conn = api.SqlServerConnection(host=host, user=user, password=password, type=server_type)
+            
+            new_base_id = self.mod.create_base(db_name, sql_conn)
+          
     
     - Режим sessions:
             

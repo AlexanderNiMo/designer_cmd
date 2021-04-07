@@ -2,9 +2,33 @@ import logging
 from designer_cmd.utils import PlatformVersion, get_rac_path, execute_command
 from typing import List, Dict, Optional
 from abc import ABC
+from enum import Enum
+from dataclasses import dataclass, field
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SqlServerConnection:
+    host: str
+    user: str
+    password: str
+    type: 'SqlServerType'
+    port: int = field(default=5432)
+
+    @property
+    def server_addr(self):
+        return f'{self.host}:{self.port}'
+
+
+class SqlServerType(Enum):
+    MSSQL = 'MSSQLServer'
+    POSTGRE_SQL = 'PostgreSQL'
+    IBMDB2 = 'IBMDB2'
+    DB2 = 'DB2'
+    ORACLE = 'OracleDatabase'
+
 
 
 class RacConnection:
@@ -254,6 +278,46 @@ class InfobaseMod(ABCRacMod):
 
         params = ['update', '--scheduled-jobs-deny=off']
         self.execute_command(params, base_cred_required=True)
+
+    @required_cluster_id
+    @required_base_id
+    def drop_base(self):
+        logger.debug(f'Удаляю базу {self.executor.base_id} '
+                     f'по соединению {self.executor.connection}')
+
+        params = ['drop']
+        self.execute_command(command_params=params, base_cred_required=True)
+
+    @required_cluster_id
+    def create_base(self, database_name: str, sql_connection: SqlServerConnection, sql_base_name: str = None):
+        '''
+        create_base
+        '''
+        logger.debug(f'Создаю базу {self.executor.base_id} '
+                     f'по соединению {self.executor.connection}')
+
+        _sql_base = sql_base_name if sql_base_name else database_name
+
+        params = [
+            'create',
+            '--create-database',
+            f'--name={database_name}',
+            '--license-distribution=allow',
+            f'--dbms={sql_connection.type}',
+            '--locale=ru_RU',
+            '--date-offset=2000',
+            f'--db-server={sql_connection.server_addr}',
+            f'--db-name={_sql_base}',
+            f'--db-user={sql_connection.user}',
+            f'--db-pwd={sql_connection.password}'
+        ]
+
+        new_base = self.execute_command(command_params=params, base_id_required=False)
+        if len(new_base) == 0:
+            raise SyntaxError(f'Не удалось создать базыу {database_name}')
+        self.executor.base_id = new_base[0].get('infobase', None)
+
+        return self.executor.base_id
 
 
 class ClusterMod(ABCRacMod):
