@@ -7,7 +7,7 @@ __maintainer__ = __author__
 
 __email__ = 'binipox@gmail.com'
 __license__ = 'MIT'
-__version__ = '0.2.10'
+__version__ = '0.2.11'
 
 
 __all__ = (

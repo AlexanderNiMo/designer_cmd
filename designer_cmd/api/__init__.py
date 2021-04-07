@@ -11,5 +11,7 @@ __all__ = [
     'convert_cf_to_xml',
     'xml_conf_version_file_exists',
     'Rac',
-    'RacConnection'
+    'RacConnection',
+    'SqlServerType',
+    'SqlServerConnection',
 ]
