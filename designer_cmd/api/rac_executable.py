@@ -15,11 +15,13 @@ class SqlServerConnection:
     user: str
     password: str
     type: 'SqlServerType'
-    port: int = field(default=5432)
+    port: int = field(default=None)
 
     @property
     def server_addr(self):
-        return f'{self.host}:{self.port}'
+        if self.port:
+            return f'{self.host}:{self.port}'
+        return self.host
 
 
 class SqlServerType(Enum):
