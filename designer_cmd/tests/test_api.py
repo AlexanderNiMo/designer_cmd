@@ -562,7 +562,7 @@ class TestInfobaseMod(unittest.TestCase):
             '--create-database',
             f'--name={db_name}',
             '--license-distribution=allow',
-            f'--dbms={server_type}',
+            f'--dbms=MSSQLServer',
             '--locale=ru_RU',
             '--date-offset=2000',
             f'--db-server={host}:5432',

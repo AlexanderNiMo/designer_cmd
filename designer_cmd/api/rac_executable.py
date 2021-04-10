@@ -290,9 +290,6 @@ class InfobaseMod(ABCRacMod):
 
     @required_cluster_id
     def create_base(self, database_name: str, sql_connection: SqlServerConnection, sql_base_name: str = None):
-        '''
-        create_base
-        '''
         logger.debug(f'Создаю базу {self.executor.base_id} '
                      f'по соединению {self.executor.connection}')
 
@@ -303,7 +300,7 @@ class InfobaseMod(ABCRacMod):
             '--create-database',
             f'--name={database_name}',
             '--license-distribution=allow',
-            f'--dbms={sql_connection.type}',
+            f'--dbms={sql_connection.type.value}',
             '--locale=ru_RU',
             '--date-offset=2000',
             f'--db-server={sql_connection.server_addr}',
