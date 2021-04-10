@@ -30,7 +30,6 @@ class SqlServerType(Enum):
     ORACLE = 'OracleDatabase'
 
 
-
 class RacConnection:
 
     def __init__(self, user: str = '',
