@@ -126,7 +126,7 @@ def required_base_id(func):
 
 class Rac:
 
-    def __init__(self, platform_version: str, connection: RacConnection):
+    def __init__(self, platform_version: str, connection: RacConnection, command_timeout: int = 10):
         self.platform_version: PlatformVersion = PlatformVersion(platform_version)
         self.connection = connection
         self.executable_path = get_rac_path(self.platform_version)
@@ -137,6 +137,8 @@ class Rac:
         self.infobase = InfobaseMod(self)
         self.cluster = ClusterMod(self)
         self.sessions = SessionMod(self)
+
+        self.command_timeout = command_timeout
 
     def add_cluster_id(self, params: list, cluster_id: Optional[str] = None):
         if not cluster_id:
@@ -181,7 +183,7 @@ class Rac:
 
         logger.debug(f'Выполняю команду {self.executable_path} {str_command}')
 
-        result = execute_command(self.executable_path, params, 10)
+        result = execute_command(self.executable_path, params, self.command_timeout)
 
         if result[0] == 0:
             result_data = parse_result(result[1])
@@ -293,6 +295,12 @@ class InfobaseMod(ABCRacMod):
         logger.debug(f'Создаю базу {self.executor.base_id} '
                      f'по соединению {self.executor.connection}')
 
+        change_timeout = False
+        curr_timeout = self.executor.command_timeout
+        if curr_timeout < 100:
+            change_timeout = True
+            self.executor.command_timeout = 100
+
         _sql_base = sql_base_name if sql_base_name else database_name
 
         params = [
@@ -313,6 +321,9 @@ class InfobaseMod(ABCRacMod):
         if len(new_base) == 0:
             raise SyntaxError(f'Не удалось создать базыу {database_name}')
         self.executor.base_id = new_base[0].get('infobase', None)
+
+        if change_timeout:
+            self.executor.command_timeout = curr_timeout
 
         return self.executor.base_id
 
