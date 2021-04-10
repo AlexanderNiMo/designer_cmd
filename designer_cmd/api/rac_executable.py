@@ -37,13 +37,15 @@ class RacConnection:
                  server: str = '',
                  port: int = 1545,
                  base_user: str = '',
-                 base_password: str = ''):
+                 base_password: str = '',
+                 timeout: int = 10):
         self.server = server
         self.port = port
         self.user = user
         self.password = password
         self.base_user = base_user
         self.base_password = base_password
+        self.timeout = timeout
 
     def get_connection_string(self):
         return f'{self.server}:{self.port}'
@@ -125,7 +127,7 @@ def required_base_id(func):
 
 class Rac:
 
-    def __init__(self, platform_version: str, connection: RacConnection, command_timeout: int = 10):
+    def __init__(self, platform_version: str, connection: RacConnection):
         self.platform_version: PlatformVersion = PlatformVersion(platform_version)
         self.connection = connection
         self.executable_path = get_rac_path(self.platform_version)
@@ -136,8 +138,6 @@ class Rac:
         self.infobase = InfobaseMod(self)
         self.cluster = ClusterMod(self)
         self.sessions = SessionMod(self)
-
-        self.command_timeout = command_timeout
 
     def add_cluster_id(self, params: list, cluster_id: Optional[str] = None):
         if not cluster_id:
@@ -182,7 +182,7 @@ class Rac:
 
         logger.debug(f'Выполняю команду {self.executable_path} {str_command}')
 
-        result = execute_command(self.executable_path, params, self.command_timeout)
+        result = execute_command(self.executable_path, params, self.connection.timeout)
 
         if result[0] == 0:
             result_data = parse_result(result[1])
