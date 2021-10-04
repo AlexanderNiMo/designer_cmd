@@ -141,6 +141,8 @@ class Rac:
         self.cluster = ClusterMod(self)
         self.sessions = SessionMod(self)
 
+        self.command_timeout = self.connection.timeout
+
     def add_cluster_id(self, params: list, cluster_id: Optional[str] = None):
         if not cluster_id:
             cluster_id = self._cluster_id
@@ -184,7 +186,7 @@ class Rac:
 
         logger.debug(f'Выполняю команду {self.executable_path} {str_command}')
 
-        result = execute_command(self.executable_path, params, self.connection.timeout)
+        result = execute_command(self.executable_path, params, self.command_timeout)
 
         if result[0] == 0:
             result_data = parse_result(result[1])
@@ -293,7 +295,7 @@ class InfobaseMod(ABCRacMod):
 
     @required_cluster_id
     def create_base(self, database_name: str, sql_connection: SqlServerConnection, sql_base_name: str = None):
-        logger.debug(f'Создаю базу {self.executor.base_id} '
+        logger.debug(f'Создаю базу {database_name} '
                      f'по соединению {self.executor.connection}')
 
         change_timeout = False
