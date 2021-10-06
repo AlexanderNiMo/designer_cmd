@@ -316,7 +316,7 @@ class Designer(AbcExecutor):
         """
         full_catalog_path = os.path.abspath(catalog_path)
         logger.debug(f'Загружаю конфигурацию из файлов {full_catalog_path} конфигурацию БД по соединению {self.connection}')
-        params = [f'/LoadConfigFromFiles', f'{full_catalog_path}']
+        params = [f'/LoadConfigFromFiles', f'{full_catalog_path}', f'/UpdateDBCfg']
 
         if list_file is not None and os.path.exists(list_file):
             params.extend([f'-listFile', f'{os.path.abspath(list_file)}'])
